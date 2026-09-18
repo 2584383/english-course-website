@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@theme {
+  /* --- Palette issue des prototypes hi-fi --- */
+  --color-brand-50: #f7fbfa;
+  --color-brand-100: #eef6f4;
+  --color-brand-200: #e2ece9;
+  --color-brand-300: #bfdde2;
+  --color-brand-400: #8ba09e;
+  --color-brand-500: #6f8583;
+  --color-brand-600: #33504f;
+  --color-brand-700: #2f6a70;
+  --color-brand-800: #0e474c;
+  --color-brand-900: #123338;
+
+  --color-soft: #e4f1f4;
+  --color-soft-border: #bfdde2;
+  --color-line: #e2ece9;
+  --color-ink: #123338;
+  --color-muted: #7d918f;
+  --color-muted-soft: #8ba09e;
+
+  --color-accent: #f6b268;
+  --color-accent-soft: #fdf0e0;
+  --color-accent-ink: #9c5b45;
+
+  --color-paper: #f6f5f2;
+  --color-canvas: #d9efe9;
+
+  --font-display: var(--font-quicksand), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 20px;
+  --radius-field: 12px;
+
+  --shadow-card: 0 18px 40px -28px rgba(14, 71, 76, 0.45);
+  --shadow-float: 0 30px 70px -34px rgba(14, 71, 76, 0.35);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--color-brand-50);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+
+  /* Cible tactile confortable : 70 % des usages sont mobiles (cf. CDC 4.1) */
+  button,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-800);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .animate-pop {
+    animation: pop 0.22s ease;
+  }
+
+  .safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
