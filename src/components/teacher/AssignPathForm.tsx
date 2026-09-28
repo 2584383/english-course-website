@@ -14,9 +14,12 @@ const EMPTY: ActionState = {};
 export function AssignPathForm({
   studentId,
   templates,
+  suggestedId,
 }: {
   studentId: string;
   templates: PathTemplate[];
+  /** Gabarit dont le scénario correspond à celui de l'apprenant. */
+  suggestedId?: string;
 }) {
   const [state, action, pending] = useActionState(
     assignTemplateToStudent,
@@ -28,7 +31,7 @@ export function AssignPathForm({
       <p className="text-sm text-muted">
         Aucun gabarit disponible.{" "}
         <Link href="/prof/parcours" className="font-bold text-brand-800">
-          Crée ton premier parcours type
+          Choisis un modèle dans le catalogue
         </Link>
         .
       </p>
@@ -42,11 +45,15 @@ export function AssignPathForm({
       {state.error ? <Alert tone="error">{state.error}</Alert> : null}
       {state.success ? <Alert tone="success">{state.success}</Alert> : null}
 
-      <Field label="Gabarit">
-        <Select name="templateId" required>
+      <Field
+        label="Gabarit"
+        hint={suggestedId ? "Présélectionné d'après le scénario de l'apprenant." : undefined}
+      >
+        <Select name="templateId" required defaultValue={suggestedId}>
           {templates.map((template) => (
             <option key={template.id} value={template.id}>
               {template.name} ({template.session_count} séances)
+              {template.id === suggestedId ? " · suggéré" : ""}
             </option>
           ))}
         </Select>

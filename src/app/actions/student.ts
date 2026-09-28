@@ -60,10 +60,11 @@ export async function toggleAssignment(assignmentId: string, done: boolean) {
     .eq("id", assignmentId)
     .eq("student_id", session.id);
 
-  revalidatePath("/app/devoirs");
-  revalidatePath("/app");
+  revalidatePath("/app", "layout");
 }
 
+// Appelée pendant le rendu de la page du compte-rendu : pas de revalidatePath
+// ici (interdit au rendu), les pages /app sont de toute façon dynamiques.
 export async function markReportRead(reportId: string) {
   const session = await requireStudent();
   const supabase = await createClient();
@@ -74,8 +75,6 @@ export async function markReportRead(reportId: string) {
     .eq("id", reportId)
     .eq("student_id", session.id)
     .is("read_at", null);
-
-  revalidatePath("/app");
 }
 
 const evaluationSchema = z.object({
@@ -122,16 +121,40 @@ export async function submitSelfEvaluation(
   return { success: "Merci, ton enseignant reçoit tes réponses." };
 }
 
-export async function updateNotificationPreferences(formData: FormData) {
+const PREFERENCE_KEYS = [
+  "session_reminders",
+  "email_reminders",
+  "report_published",
+] as const;
+
+export type PreferenceKey = (typeof PREFERENCE_KEYS)[number];
+
+/** Un interrupteur du profil = une préférence, enregistrée au clic. */
+export async function setNotificationPreference(
+  key: PreferenceKey,
+  value: boolean,
+) {
+  if (!PREFERENCE_KEYS.includes(key)) return;
+
   const session = await requireStudent();
   const supabase = await createClient();
 
-  await supabase.from("notification_preferences").upsert({
-    user_id: session.id,
-    session_reminders: formData.get("session_reminders") === "on",
-    email_reminders: formData.get("email_reminders") === "on",
-    report_published: formData.get("report_published") === "on",
-  });
+  const { data: current } = await supabase
+    .from("notification_preferences")
+    .select("*")
+    .eq("user_id", session.id)
+    .maybeSingle();
+
+  const next: Record<PreferenceKey, boolean> = {
+    session_reminders: current?.session_reminders ?? true,
+    email_reminders: current?.email_reminders ?? true,
+    report_published: current?.report_published ?? true,
+  };
+  next[key] = value;
+
+  await supabase
+    .from("notification_preferences")
+    .upsert({ user_id: session.id, ...next });
 
   revalidatePath("/app/profil");
 }

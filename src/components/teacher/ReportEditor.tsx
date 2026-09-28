@@ -5,20 +5,11 @@ import { useActionState } from "react";
 import { saveReport } from "@/app/actions/teacher";
 import type { ActionState } from "@/app/actions/auth";
 import { Alert, Button, Card, Field, Textarea } from "@/components/ui";
+import { REPORT_SKILLS } from "@/lib/constants";
 import type { SessionReport } from "@/lib/database.types";
 import { cn } from "@/lib/utils";
 
 const EMPTY: ActionState = {};
-
-/** Checklist des compétences abordées pendant la leçon (CDC 3.2). */
-const SKILLS = [
-  "Fluidité / débit",
-  "Structures grammaticales clés",
-  "Prononciation",
-  "Vocabulaire professionnel",
-  "Compréhension orale",
-  "Gestion du stress / posture",
-];
 
 export function ReportEditor({
   bookingId,
@@ -57,7 +48,7 @@ export function ReportEditor({
             Compétences travaillées
           </legend>
           <div className="flex flex-wrap gap-2">
-            {SKILLS.map((skill) => (
+            {REPORT_SKILLS.map((skill) => (
               <label
                 key={skill}
                 className={cn(

@@ -10,6 +10,7 @@ import {
   Avatar,
   Badge,
   Button,
+  ButtonLink,
   Card,
   Eyebrow,
   Input,
@@ -101,6 +102,10 @@ export default async function StudentSheetPage({
 
   const done = sessions.filter((session) => session.status === "done").length;
   const pct = sessions.length ? Math.round((done / sessions.length) * 100) : 0;
+  const suggestedTemplateId = templates.find(
+    (template) =>
+      template.scenario != null && template.scenario === studentProfile?.scenario,
+  )?.id;
 
   return (
     <div className="flex flex-col gap-5">
@@ -131,7 +136,11 @@ export default async function StudentSheetPage({
               <p className="text-sm text-muted">
                 Assigne un gabarit pour générer la progression de cet apprenant.
               </p>
-              <AssignPathForm studentId={studentId} templates={templates} />
+              <AssignPathForm
+                studentId={studentId}
+                templates={templates}
+                suggestedId={suggestedTemplateId}
+              />
             </Card>
           )}
 
@@ -245,6 +254,12 @@ export default async function StudentSheetPage({
                 ))}
               </ul>
             )}
+            <ButtonLink
+              href={`/prof/comptes-rendus/nouveau?etudiant=${studentId}`}
+              tone="ghost"
+            >
+              + Rédiger un compte-rendu
+            </ButtonLink>
           </Card>
 
           <Card className="flex flex-col gap-3">
@@ -274,7 +289,11 @@ export default async function StudentSheetPage({
           {path ? (
             <Card className="flex flex-col gap-3">
               <SectionTitle>Changer de parcours</SectionTitle>
-              <AssignPathForm studentId={studentId} templates={templates} />
+              <AssignPathForm
+                studentId={studentId}
+                templates={templates}
+                suggestedId={suggestedTemplateId}
+              />
             </Card>
           ) : null}
         </aside>

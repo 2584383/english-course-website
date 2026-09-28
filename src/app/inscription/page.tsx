@@ -7,6 +7,7 @@ export default function SignUpPage() {
   return (
     <AuthShell
       eyebrow="Étape 1 sur 3"
+      step={1}
       title="Crée ton compte"
       subtitle="Ton enseignant a préparé ton parcours après votre appel de découverte."
     >

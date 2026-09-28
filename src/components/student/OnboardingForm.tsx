@@ -55,10 +55,10 @@ export function OnboardingForm({
                 aria-pressed={on}
                 onClick={() => toggle(option)}
                 className={cn(
-                  "rounded-full border px-3.5 py-2 text-[12.5px] font-bold transition",
+                  "rounded-full border px-3.5 py-2 text-[12.5px] font-bold transition lg:px-[15px] lg:py-[9px] lg:text-[13px]",
                   on
-                    ? "border-brand-800 bg-brand-800 text-white"
-                    : "border-line bg-white text-brand-600",
+                    ? "border-brand-800 bg-soft text-brand-800"
+                    : "border-line bg-white text-body hover:border-soft-border",
                 )}
               >
                 {option}

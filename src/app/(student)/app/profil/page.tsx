@@ -1,136 +1,140 @@
 import Link from "next/link";
 
 import { signOut } from "@/app/actions/auth";
-import { updateNotificationPreferences } from "@/app/actions/student";
-import {
-  Avatar,
-  Button,
-  Card,
-  Eyebrow,
-  SectionTitle,
-} from "@/components/ui";
+import { NotificationToggles } from "@/components/student/NotificationToggles";
+import { ActionButton, Chevron, Kicker, Panel } from "@/components/student/kit";
 import { requireStudent } from "@/lib/auth";
+import { getTeacherName } from "@/lib/queries/student";
 import { createClient } from "@/lib/supabase/server";
-import { SCENARIO_LABELS, initials, levelLabel } from "@/lib/utils";
+import { SCENARIO_LABELS, cn, firstName, initials, levelLabel } from "@/lib/utils";
 
 export const metadata = { title: "Profil" };
 
-const PREFERENCES = [
-  { name: "session_reminders", label: "Rappels de séance par notification" },
-  { name: "email_reminders", label: "Rappels par email (J-3, J-1, H-1)" },
-  { name: "report_published", label: "Nouveau compte-rendu publié" },
-] as const;
-
+/**
+ * Profil (wireframe 2b) : identité, cadre pédagogique posé par l'enseignant
+ * (lecture seule), notifications, accès aux données RGPD.
+ */
 export default async function ProfilePage() {
   const { profile, studentProfile } = await requireStudent();
 
   const supabase = await createClient();
-  const [{ data: prefs }, { data: teacher }] = await Promise.all([
+  const [{ data: prefs }, { data: path }, teacherName] = await Promise.all([
     supabase
       .from("notification_preferences")
       .select("*")
       .eq("user_id", profile.id)
       .maybeSingle(),
-    studentProfile?.teacher_id
-      ? supabase
-          .from("profiles")
-          .select("full_name, email")
-          .eq("id", studentProfile.teacher_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
+    supabase
+      .from("learning_paths")
+      .select("name")
+      .eq("student_id", profile.id)
+      .eq("is_active", true)
+      .maybeSingle(),
+    getTeacherName(studentProfile?.teacher_id),
   ]);
 
+  const teacher = teacherName ? firstName(teacherName) : null;
+  const level = levelLabel(
+    studentProfile?.initial_level ?? null,
+    studentProfile?.target_level ?? null,
+  );
+  const levelLine =
+    studentProfile?.initial_level && studentProfile?.target_level
+      ? `Niveau estimé ${studentProfile.initial_level} → objectif ${studentProfile.target_level}`
+      : level;
+  const pathLine = [
+    path?.name ??
+      (studentProfile?.scenario ? SCENARIO_LABELS[studentProfile.scenario] : null),
+    teacher ? `avec ${teacher}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const goal = studentProfile?.goal_in_own_words ?? studentProfile?.goal;
+
   return (
-    <div className="flex flex-col gap-4 animate-pop">
-      <header className="flex items-center gap-3">
-        <Avatar label={initials(profile.full_name)} size={54} />
-        <div>
-          <h1 className="font-display text-xl font-extrabold text-ink">
-            {profile.full_name}
+    <div className="flex max-w-[1020px] flex-col gap-3.5 animate-pop lg:gap-5">
+      <header className="flex items-center gap-3.5 pt-1.5 lg:gap-4 lg:pt-0">
+        <span className="flex size-[58px] flex-none items-center justify-center rounded-full border border-soft-border bg-soft font-display text-xl font-extrabold text-brand-800 lg:size-16 lg:text-[22px]">
+          {initials(profile.full_name).slice(0, 1)}
+        </span>
+        <div className="min-w-0">
+          <h1 className="font-display text-[22px] font-extrabold leading-[1.15] text-ink lg:text-[27px]">
+            {profile.full_name ?? profile.email}
           </h1>
-          <p className="text-[13px] text-muted">{profile.email}</p>
+          <p className="truncate text-[13px] leading-snug text-brand-500 lg:mt-[3px] lg:text-[13.5px]">
+            {profile.email}
+          </p>
         </div>
       </header>
 
-      <Card tone="soft" className="flex flex-col gap-2">
-        <Eyebrow>Mon suivi</Eyebrow>
-        <dl className="flex flex-col gap-1.5 text-[13px]">
-          <Row
-            label="Niveau"
-            value={levelLabel(
-              studentProfile?.initial_level ?? null,
-              studentProfile?.target_level ?? null,
-            )}
-          />
-          {studentProfile?.scenario ? (
-            <Row
-              label="Objectif"
-              value={SCENARIO_LABELS[studentProfile.scenario]}
-            />
-          ) : null}
-          {teacher ? (
-            <Row label="Enseignant" value={teacher.full_name ?? teacher.email} />
+      <div className="grid items-start gap-3.5 lg:grid-cols-[repeat(auto-fit,minmax(300px,1fr))] lg:gap-4">
+        <Panel tone="soft" className="flex flex-col gap-1.5">
+          <Kicker tone="brand">Mon cadre</Kicker>
+          <p className="text-[14.5px] font-semibold leading-[1.45] text-deep lg:text-[15.5px]">
+            {levelLine}
+          </p>
+          {pathLine ? (
+            <p className="text-[13.5px] leading-[1.45] text-body lg:text-sm">
+              {pathLine}
+            </p>
           ) : null}
           {studentProfile?.availability?.length ? (
-            <Row
-              label="Disponibilités"
-              value={studentProfile.availability.join(" · ")}
-            />
+            <p className="text-[13.5px] leading-[1.45] text-body lg:text-sm">
+              Disponibilités : {studentProfile.availability.join(" · ")}
+            </p>
           ) : null}
-        </dl>
-      </Card>
+          <p className="mt-[3px] text-xs leading-[1.4] text-muted">
+            Défini avec {teacher ?? "ton enseignant"} pendant l&apos;appel de
+            découverte.
+          </p>
+        </Panel>
 
-      <Card className="flex flex-col gap-3">
-        <SectionTitle>Notifications</SectionTitle>
-        <form action={updateNotificationPreferences} className="flex flex-col gap-3">
-          {PREFERENCES.map((pref) => (
-            <label
-              key={pref.name}
-              className="flex items-center justify-between gap-3 text-sm"
-            >
-              <span className="text-brand-600">{pref.label}</span>
-              <input
-                type="checkbox"
-                name={pref.name}
-                defaultChecked={prefs?.[pref.name] ?? true}
-                className="size-5 flex-none accent-[#0e474c]"
-              />
-            </label>
-          ))}
-          <Button type="submit" tone="ghost">
-            Enregistrer mes préférences
-          </Button>
-        </form>
-      </Card>
+        {goal ? (
+          <Panel className="flex flex-col gap-[7px] lg:gap-2">
+            <Kicker>Mon objectif</Kicker>
+            <p className="text-[14.5px] leading-normal text-brand-600 lg:text-[15px] lg:leading-[1.55]">
+              « {goal} »
+            </p>
+          </Panel>
+        ) : null}
+      </div>
 
-      <Card className="flex flex-col gap-2">
-        <SectionTitle>Mes données</SectionTitle>
-        <p className="text-[13px] leading-relaxed text-muted">
-          Consulte les consentements donnés, exporte tes données ou demande la
-          suppression complète de ton compte.
-        </p>
+      <div className="lg:max-w-[620px]">
+        <NotificationToggles
+          values={{
+            session_reminders: prefs?.session_reminders ?? true,
+            email_reminders: prefs?.email_reminders ?? true,
+            report_published: prefs?.report_published ?? true,
+          }}
+        />
+      </div>
+
+      <div className="flex flex-col gap-3.5 lg:flex-row lg:flex-wrap lg:gap-3">
         <Link
           href="/app/profil/confidentialite"
-          className="text-sm font-bold text-brand-800"
+          className={cn(
+            "flex items-center gap-3 rounded-[18px] border border-line bg-white p-4 no-underline transition hover:border-soft-border",
+            "lg:rounded-xl lg:px-[22px] lg:py-3.5",
+          )}
         >
-          Confidentialité et suppression →
+          <span className="flex-1 font-display text-[15px] font-bold leading-[1.2] text-ink lg:font-sans lg:text-sm">
+            Mes données &amp; confidentialité
+          </span>
+          <span className="lg:hidden">
+            <Chevron />
+          </span>
         </Link>
-      </Card>
 
-      <form action={signOut}>
-        <Button type="submit" tone="ghost" className="w-full">
-          Se déconnecter
-        </Button>
-      </form>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between gap-3">
-      <dt className="text-brand-600">{label}</dt>
-      <dd className="text-right font-semibold text-brand-900">{value}</dd>
+        <form action={signOut}>
+          <ActionButton
+            type="submit"
+            tone="quiet"
+            className="w-full rounded-[14px] py-3.5 text-[15px] lg:w-auto lg:rounded-xl lg:px-[22px] lg:text-sm"
+          >
+            Se déconnecter
+          </ActionButton>
+        </form>
+      </div>
     </div>
   );
 }

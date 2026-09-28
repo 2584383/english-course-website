@@ -27,6 +27,26 @@
   --color-paper: #f6f5f2;
   --color-canvas: #d9efe9;
 
+  /* --- Nuances secondaires des prototypes étudiant --- */
+  --color-track: #e2eeeb;
+  --color-track-soft: #cbe4e5;
+  --color-body: #4d6a68;
+  --color-deep: #193f42;
+  --color-dash: #bcd4d0;
+  --color-chevron: #b6cbc8;
+  --color-faint: #a9bcba;
+  --color-tile: #eaf3f1;
+  --color-chip: #e8f2f0;
+  --color-chip-ink: #69807e;
+  --color-locked: #f5fbf9;
+  --color-box: #c2d5d2;
+  --color-disabled: #dde9e6;
+  --color-disabled-ink: #9fb3b0;
+  --color-danger-soft: #fdf7f5;
+  --color-danger-line: #e6cfc7;
+  --color-danger-border: #d9b5a9;
+  --color-danger-body: #6b4a41;
+
   --font-display: var(--font-quicksand), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
 
@@ -46,15 +66,48 @@
     background: var(--color-brand-50);
     color: var(--color-ink);
     font-family: var(--font-sans);
+    font-optical-sizing: auto;
+    font-kerning: normal;
+    line-height: 1.55;
+    text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
+  /*
+   * Titres : approche resserrée et lignes équilibrées, pour éviter un mot
+   * seul en fin de titre sur deux lignes.
+   */
   h1,
   h2,
   h3,
-  h4 {
+  h4,
+  .font-display {
     font-family: var(--font-display);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  h1 {
+    letter-spacing: -0.02em;
+  }
+
+  /* Paragraphes : pas de mot orphelin en dernière ligne */
+  p,
+  li,
+  dd,
+  blockquote {
+    text-wrap: pretty;
+  }
+
+  /* Libellés en capitales : ponctuation et tirets calés sur les majuscules */
+  .uppercase {
+    font-feature-settings: "case" 1;
+  }
+
+  ::selection {
+    background: var(--color-accent-soft);
+    color: var(--color-ink);
   }
 
   /* Cible tactile confortable : 70 % des usages sont mobiles (cf. CDC 4.1) */

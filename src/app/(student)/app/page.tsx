@@ -1,196 +1,249 @@
 import Link from "next/link";
 
 import { NextSessionCard } from "@/components/student/NextSessionCard";
+import { WorkChecklist } from "@/components/student/WorkChecklist";
 import {
-  Avatar,
-  ButtonLink,
-  Card,
-  Eyebrow,
-  ProgressBar,
-  SectionTitle,
-} from "@/components/ui";
+  ActionLink,
+  Bar,
+  Chevron,
+  Kicker,
+  Panel,
+  PageHeader,
+  TextLink,
+} from "@/components/student/kit";
 import { requireStudent } from "@/lib/auth";
-import { getStudentDashboard } from "@/lib/queries/student";
-import { formatDate, initials } from "@/lib/utils";
+import { getStudentDashboard, getTeacherName } from "@/lib/queries/student";
+import { groupWork } from "@/lib/student-work";
+import { firstName, formatShortDate, initials } from "@/lib/utils";
 
 export const metadata = { title: "Accueil" };
 
+/**
+ * Accueil « la séance d'abord » (wireframe 1a, prototypes hi-fi).
+ * Hiérarchie : séance → progression → compte-rendu → devoirs.
+ * Desktop : deux colonnes 1.55fr / 1fr.
+ */
 export default async function StudentHomePage() {
   const { profile, studentProfile } = await requireStudent();
-  const dashboard = await getStudentDashboard(profile.id);
+  const [dashboard, teacherName] = await Promise.all([
+    getStudentDashboard(profile.id),
+    getTeacherName(studentProfile?.teacher_id),
+  ]);
   const {
     path,
+    sessions,
     progress,
     nextBooking,
+    lastBooking,
     latestReport,
     assignments,
     needsSelfEvaluation,
   } = dashboard;
 
-  const firstName = profile.full_name?.split(" ")[0] ?? "";
-  const todo = assignments.filter((a) => a.status === "todo");
+  const teacher = firstName(teacherName) || "ton enseignant";
+  const Teacher = teacher[0].toUpperCase() + teacher.slice(1);
+  const work = groupWork({ assignments, sessions, nextBooking, lastBooking });
   const isFirstVisit = progress.done === 0 && !nextBooking;
+  const openCount = sessions.filter((s) => s.status === "open").length;
+
+  const subtitle = path
+    ? progress.done === 0
+      ? `${path.name} · ${progress.total} séances`
+      : `${path.name} · séance ${Math.min(progress.done + 1, progress.total)} / ${progress.total}`
+    : `${Teacher} prépare ton parcours.`;
 
   return (
-    <div className="flex flex-col gap-4 animate-pop">
-      <header className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-[25px] font-extrabold leading-tight text-ink">
-            Bonjour {firstName}
-          </h1>
-          <p className="text-[13px] text-muted">
-            {path
-              ? `${path.name} · ${
-                  progress.done === 0
-                    ? `${progress.total} séances`
-                    : `séance ${Math.min(progress.done + 1, progress.total)} / ${progress.total}`
-                }`
-              : "Ton parcours arrive après l'appel de découverte."}
-          </p>
-        </div>
-        <Link href="/app/profil" aria-label="Mon profil">
-          <Avatar label={initials(profile.full_name)} />
-        </Link>
-      </header>
+    <div className="flex flex-col gap-3.5 animate-pop lg:gap-[22px]">
+      <PageHeader
+        title={`Bonjour ${firstName(profile.full_name)}`}
+        subtitle={subtitle}
+        action={
+          <>
+            <Link
+              href="/app/profil"
+              aria-label="Mon profil"
+              className="flex size-[46px] flex-none items-center justify-center rounded-full border border-soft-border bg-soft font-display text-base font-extrabold text-brand-800 no-underline lg:hidden"
+            >
+              {initials(profile.full_name).slice(0, 1)}
+            </Link>
+            <ActionLink
+              href="/app/reserver"
+              className="hidden px-5 py-3 text-sm lg:inline-flex"
+            >
+              Réserver une séance
+            </ActionLink>
+          </>
+        }
+      />
 
-      {isFirstVisit ? (
-        <Card tone="soft" className="flex flex-col gap-3">
-          <Eyebrow>Première étape</Eyebrow>
-          <p className="text-sm leading-relaxed text-brand-900">
-            Ton parcours est prêt. Réserve ta première séance pour lancer la
-            progression.
-          </p>
-          <ButtonLink href="/app/reserver" tone="accent">
-            Réserver ma première séance
-          </ButtonLink>
-        </Card>
-      ) : null}
+      <div className="grid items-start gap-3.5 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:gap-5">
+        <div className="flex min-w-0 flex-col gap-3.5 lg:gap-5">
+          {isFirstVisit && path ? (
+            <Panel
+              tone="soft"
+              size="lg"
+              className="flex flex-col gap-2.5 lg:gap-[11px] lg:p-[26px]"
+            >
+              <Kicker tone="brand">Première étape</Kicker>
+              <p className="font-display text-[19px] font-bold leading-[1.2] text-ink lg:text-2xl">
+                Réserve ta première séance
+              </p>
+              <p className="max-w-[520px] text-sm leading-[1.45] text-body lg:text-[15px] lg:leading-normal">
+                {Teacher} a préparé ton
+                parcours après votre appel.
+                {openCount > 0
+                  ? ` ${openCount} séance${openCount > 1 ? "s sont ouvertes" : " est ouverte"}.`
+                  : ""}
+              </p>
+              <ActionLink
+                href="/app/reserver"
+                className="mt-0.5 lg:mt-1 lg:self-start lg:px-6 lg:py-[13px]"
+              >
+                Choisir un créneau
+              </ActionLink>
+            </Panel>
+          ) : null}
 
-      {nextBooking ? (
-        <NextSessionCard booking={nextBooking} />
-      ) : !isFirstVisit ? (
-        <Card className="flex flex-col gap-3">
-          <Eyebrow>Prochaine séance</Eyebrow>
-          <p className="text-sm text-muted">
-            Aucun créneau réservé pour le moment.
-          </p>
-          <ButtonLink href="/app/reserver" tone="accent">
-            Choisir un créneau
-          </ButtonLink>
-        </Card>
-      ) : null}
+          {nextBooking ? (
+            <NextSessionCard
+              booking={nextBooking}
+              teacherName={teacherName ? firstName(teacherName) : null}
+            />
+          ) : !isFirstVisit && path ? (
+            <Panel tone="soft" size="lg" className="flex flex-col gap-2.5 lg:p-[26px]">
+              <Kicker tone="brand">Prochaine séance</Kicker>
+              <p className="font-display text-[19px] font-bold leading-[1.2] text-ink lg:text-2xl">
+                Aucun créneau réservé
+              </p>
+              <p className="text-sm leading-[1.45] text-body lg:text-[15px]">
+                Choisis le prochain créneau pour garder le rythme.
+              </p>
+              <ActionLink href="/app/reserver" className="mt-0.5 lg:self-start lg:px-6 lg:py-[13px]">
+                Choisir un créneau
+              </ActionLink>
+            </Panel>
+          ) : null}
 
-      {path ? (
-        <Card className="flex flex-col gap-3">
-          <SectionTitle
-            action={
-              <Link
+          <Panel size="lg" className="flex flex-col gap-[9px] lg:gap-[11px]">
+            <div className="flex items-baseline justify-between gap-3">
+              <Kicker>Ma progression</Kicker>
+              <span className="font-display text-[13px] font-bold tabular-nums text-brand-800 lg:text-[15px]">
+                {progress.pct} %
+              </span>
+            </div>
+            <Bar value={progress.pct} />
+            <p className="text-[13px] leading-snug text-brand-500 lg:text-sm">
+              {!path
+                ? "Ta progression apparaîtra dès que ton parcours sera prêt."
+                : progress.done === 0
+                  ? `0 / ${progress.total} · ça commence après ta première séance`
+                  : `${progress.done} séances faites sur ${progress.total}`}
+            </p>
+            {path ? (
+              <TextLink
                 href="/app/parcours"
-                className="text-xs font-bold text-brand-800"
+                className="mt-1 hidden self-start text-[13px] lg:inline"
               >
-                Voir le parcours
-              </Link>
-            }
-          >
-            Ma progression
-          </SectionTitle>
-          <ProgressBar
-            value={progress.pct}
-            label={`${progress.done} / ${progress.total} séances`}
-            sublabel={
-              progress.done === 0
-                ? "Ça commence après ta première séance."
-                : `${progress.done} séances faites sur ${progress.total}.`
-            }
-          />
-        </Card>
-      ) : null}
-
-      {needsSelfEvaluation ? (
-        <Card tone="accent" className="flex flex-col gap-3">
-          <Eyebrow>Mi-parcours</Eyebrow>
-          <p className="text-sm leading-relaxed text-ink">
-            3 questions pour mesurer ta prise de confiance et réajuster la suite.
-          </p>
-          <ButtonLink href="/app/evaluation" tone="primary">
-            Faire mon auto-évaluation
-          </ButtonLink>
-        </Card>
-      ) : null}
-
-      {latestReport ? (
-        <Card className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <Eyebrow>Dernier compte-rendu</Eyebrow>
-            {!latestReport.read_at ? (
-              <span
-                className="size-2 rounded-full bg-brand-800"
-                aria-label="Non lu"
-              />
+                Voir les {progress.total} séances →
+              </TextLink>
             ) : null}
-          </div>
-          <Link
-            href={`/app/comptes-rendus/${latestReport.id}`}
-            className="font-display text-base font-bold text-ink no-underline"
-          >
-            {latestReport.session_title ?? latestReport.theme ?? "Séance"}
-          </Link>
-          <p className="line-clamp-2 text-[13px] leading-relaxed text-muted">
-            {latestReport.strengths ?? "Compte-rendu disponible."}
-          </p>
-          <p className="text-xs text-muted-soft">
-            {latestReport.published_at
-              ? formatDate(latestReport.published_at)
-              : null}
-          </p>
-        </Card>
-      ) : null}
+          </Panel>
 
-      {todo.length > 0 ? (
-        <Card className="flex flex-col gap-3">
-          <SectionTitle
-            action={
-              <Link
-                href="/app/devoirs"
-                className="text-xs font-bold text-brand-800"
+          {latestReport ? (
+            <Link
+              href={`/app/comptes-rendus/${latestReport.id}`}
+              className="block no-underline"
+            >
+              <Panel
+                size="lg"
+                className="flex flex-col gap-2 transition hover:border-soft-border lg:gap-[9px]"
               >
-                Tout voir
-              </Link>
-            }
-          >
-            À faire · {todo.length}
-          </SectionTitle>
-          <ul className="flex flex-col gap-2">
-            {todo.slice(0, 3).map((assignment) => (
-              <li
-                key={assignment.id}
-                className="flex items-start gap-3 rounded-[var(--radius-field)] border border-line p-3"
-              >
-                <span className="mt-0.5 size-5 flex-none rounded-md border-2 border-brand-300" />
-                <span>
-                  <span className="block text-sm font-semibold text-ink">
-                    {assignment.title}
-                  </span>
-                  {assignment.due_label ? (
-                    <span className="block text-xs text-muted-soft">
-                      {assignment.due_label}
+                <div className="flex items-center justify-between gap-3">
+                  <Kicker>Dernier compte-rendu</Kicker>
+                  <span className="flex items-center gap-[7px]">
+                    {!latestReport.read_at ? (
+                      <span
+                        className="size-[7px] rounded-full bg-brand-800"
+                        aria-label="Non lu"
+                      />
+                    ) : null}
+                    <span className="text-xs font-semibold text-brand-500">
+                      {formatShortDate(latestReport.published_at ?? latestReport.starts_at)}
                     </span>
-                  ) : null}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
+                  </span>
+                </div>
+                <p className="font-display text-base font-bold leading-[1.25] text-ink lg:text-[19px]">
+                  {latestReport.session_title ?? latestReport.theme ?? "Séance"}
+                </p>
+                <p className="line-clamp-2 max-w-[620px] text-sm leading-[1.45] text-body lg:text-[14.5px] lg:leading-normal">
+                  {[
+                    latestReport.strengths,
+                    latestReport.improvements
+                      ? `à travailler : ${latestReport.improvements}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "Ton compte-rendu est disponible."}
+                </p>
+              </Panel>
+            </Link>
+          ) : null}
+        </div>
 
-      {studentProfile?.goal_in_own_words ? (
-        <Card tone="soft" className="flex flex-col gap-1.5">
-          <Eyebrow>Mon objectif</Eyebrow>
-          <p className="text-sm leading-relaxed text-brand-900">
-            {studentProfile.goal_in_own_words}
-          </p>
-        </Card>
-      ) : null}
+        <div className="flex min-w-0 flex-col gap-3.5 lg:gap-5">
+          {work.now.length > 0 ? (
+            <WorkChecklist
+              mode="home"
+              items={work.now}
+              title="À faire"
+              moreHref="/app/devoirs"
+            />
+          ) : null}
+
+          {work.later.length > 0 ? (
+            <div className="hidden lg:block">
+              <WorkChecklist mode="home" items={work.later} title="Pour plus tard" />
+            </div>
+          ) : null}
+
+          {needsSelfEvaluation ? (
+            <Link href="/app/evaluation" className="block no-underline">
+              <Panel
+                tone="dashed"
+                size="lg"
+                className="flex items-center gap-3 transition hover:border-soft-border"
+              >
+                <span className="flex-1">
+                  <span className="block font-display text-[15px] font-bold leading-[1.2] text-ink lg:text-base">
+                    Où en es-tu, vraiment ?
+                  </span>
+                  <span className="mt-0.5 block text-[13px] leading-[1.4] text-brand-500 lg:mt-[3px]">
+                    Auto-évaluation de mi-parcours · 3 questions, 2 min
+                  </span>
+                </span>
+                <span aria-hidden className="text-lg font-bold text-brand-800">
+                  ›
+                </span>
+              </Panel>
+            </Link>
+          ) : null}
+
+          {work.now.length === 0 && work.later.length === 0 && !isFirstVisit ? (
+            <Panel size="lg" className="flex flex-col gap-2">
+              <Kicker>À faire</Kicker>
+              <p className="text-sm leading-[1.45] text-body">
+                Tout est à jour. {Teacher} te donnera tes prochains devoirs après la séance.
+              </p>
+              <Link
+                href="/app/devoirs?vue=ressources"
+                className="flex items-center gap-2 text-xs font-bold text-brand-800 no-underline"
+              >
+                Voir mes ressources <Chevron />
+              </Link>
+            </Panel>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }

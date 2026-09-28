@@ -36,6 +36,7 @@ export default async function WelcomePage() {
   return (
     <AuthShell
       eyebrow="Étape 2 sur 3"
+      step={2}
       title="Vérifie ton profil"
       subtitle="Rempli par ton enseignant pendant l'appel. Tu peux corriger l'objectif."
     >

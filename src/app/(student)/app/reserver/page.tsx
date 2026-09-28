@@ -1,75 +1,110 @@
 import { CalendlyBooking } from "@/components/student/CalendlyBooking";
-import { Alert, Card, EmptyState, Eyebrow } from "@/components/ui";
+import { Empty, Kicker, Panel, PageHeader } from "@/components/student/kit";
 import { requireStudent } from "@/lib/auth";
 import { publicEnv } from "@/lib/env";
-import { getStudentDashboard } from "@/lib/queries/student";
+import { getStudentDashboard, getTeacherName } from "@/lib/queries/student";
 import { encodeBookingContext } from "@/lib/calendly";
-import { formatDateTime } from "@/lib/utils";
+import { firstName, formatSlot } from "@/lib/utils";
 
 export const metadata = { title: "Réserver" };
 
+/**
+ * Réservation (wireframe 1d) : la séance est déjà cadrée par le parcours,
+ * on entre directement dans le calendrier. Desktop : calendrier à gauche,
+ * contexte pédagogique à droite.
+ */
 export default async function BookingPage() {
   const { profile, studentProfile } = await requireStudent();
-  const { sessions, nextBooking } = await getStudentDashboard(profile.id);
+  const [{ sessions, nextBooking }, teacherName] = await Promise.all([
+    getStudentDashboard(profile.id),
+    getTeacherName(studentProfile?.teacher_id),
+  ]);
+
+  const teacher = firstName(teacherName) || "Ton enseignant";
 
   // Prochaine séance réservable du parcours
   const target = sessions.find((session) => session.status === "open");
 
   if (!profile.booking_enabled) {
     return (
-      <EmptyState
-        title="Réservation pas encore ouverte"
-        description="Ton enseignant ouvre l'accès à l'agenda une fois les modalités réglées. Tu recevras un email dès que c'est fait."
-      />
+      <div className="flex flex-col gap-3.5 animate-pop lg:gap-5">
+        <PageHeader title="Réserver" />
+        <Empty
+          title="Réservation pas encore ouverte"
+          description={`${teacher} ouvre l'accès à l'agenda une fois les modalités réglées. Tu recevras un email dès que c'est fait.`}
+        />
+      </div>
     );
   }
 
-  return (
-    <div className="flex flex-col gap-4 animate-pop">
-      <header>
-        <h1 className="font-display text-[25px] font-extrabold text-ink">
-          Réserver une séance
-        </h1>
-        <p className="text-[13px] text-muted">
-          {target
-            ? `Prochaine séance : ${target.position}. ${target.title}`
-            : "Choisis le créneau qui te convient."}
-        </p>
-      </header>
-
-      {nextBooking ? (
-        <Alert tone="info">
-          Tu as déjà une séance le{" "}
-          <strong className="capitalize">
-            {formatDateTime(nextBooking.starts_at)}
-          </strong>
-          . Réserver ici ajoutera un créneau supplémentaire.
-        </Alert>
-      ) : null}
-
-      {profile.booking_credits > 0 ? (
-        <Card tone="soft" className="flex items-center justify-between gap-3">
-          <div>
-            <Eyebrow>Séances restantes</Eyebrow>
-            <p className="mt-1 font-display text-lg font-bold text-ink">
-              {profile.booking_credits}
-            </p>
-          </div>
-          {studentProfile?.availability?.length ? (
-            <p className="max-w-[55%] text-right text-xs text-brand-600">
-              Tes disponibilités : {studentProfile.availability.join(" · ")}
+  const context = (
+    <>
+      {target ? (
+        <Panel tone="soft" className="flex flex-col gap-1.5">
+          <Kicker tone="brand">Séance {target.position} du parcours</Kicker>
+          <p className="font-display text-[17px] font-bold leading-[1.2] text-ink lg:text-[19px]">
+            {target.title}
+          </p>
+          {target.goal ? (
+            <p className="text-[13.5px] leading-[1.45] text-body lg:text-sm">
+              {target.goal}
             </p>
           ) : null}
-        </Card>
+          <p className="text-[13px] text-body">1 h · avec {teacher} · Google Meet</p>
+        </Panel>
       ) : null}
 
-      <CalendlyBooking
-        url={publicEnv.calendlyUrl}
-        studentName={profile.full_name ?? ""}
-        studentEmail={profile.email}
-        bookingContext={encodeBookingContext(profile.id, target?.id)}
-        sessionTitle={target?.title}
+      {nextBooking ? (
+        <Panel className="flex flex-col gap-1.5">
+          <Kicker>Déjà réservée</Kicker>
+          <p className="text-sm leading-[1.45] text-brand-600">
+            {formatSlot(nextBooking.starts_at, nextBooking.ends_at)}. Réserver ici
+            ajoute un créneau supplémentaire.
+          </p>
+        </Panel>
+      ) : null}
+
+      <Panel className="flex items-center justify-between gap-3">
+        <div>
+          <Kicker>Séances restantes</Kicker>
+          <p className="mt-1.5 font-display text-lg font-bold text-ink">
+            {profile.booking_credits}
+          </p>
+        </div>
+        {studentProfile?.availability?.length ? (
+          <p className="max-w-[60%] text-right text-xs leading-snug text-brand-500">
+            Tes disponibilités : {studentProfile.availability.join(" · ")}
+          </p>
+        ) : null}
+      </Panel>
+
+      <p className="text-[12.5px] leading-[1.45] text-muted-soft">
+        Fuseau Europe/Paris · le lien Google Meet arrive par email.
+      </p>
+    </>
+  );
+
+  return (
+    <div className="flex flex-col gap-3.5 animate-pop lg:gap-5">
+      <PageHeader
+        title="Réserver"
+        subtitle={
+          target
+            ? `Séance ${target.position} · ${target.title} · 1 h`
+            : "Choisis le créneau qui te convient."
+        }
       />
+
+      <div className="grid max-w-[1100px] items-start gap-3.5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-5">
+        <CalendlyBooking
+          url={publicEnv.calendlyUrl}
+          studentName={profile.full_name ?? ""}
+          studentEmail={profile.email}
+          bookingContext={encodeBookingContext(profile.id, target?.id)}
+          sessionTitle={target ? `Séance ${target.position} — ${target.title}` : undefined}
+        />
+        <div className="flex flex-col gap-3.5 lg:gap-4">{context}</div>
+      </div>
     </div>
   );
 }

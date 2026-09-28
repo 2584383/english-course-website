@@ -12,6 +12,8 @@ export type StudentDashboard = {
   path: LearningPath | null;
   sessions: PathSession[];
   nextBooking: (Booking & { session: PathSession | null }) | null;
+  /** Dernière séance déjà commencée : borne le « avant ta prochaine séance ». */
+  lastBooking: Booking | null;
   latestReport: StudentReport | null;
   assignments: Assignment[];
   needsSelfEvaluation: boolean;
@@ -23,6 +25,7 @@ export async function getStudentDashboard(
   studentId: string,
 ): Promise<StudentDashboard> {
   const supabase = await createClient();
+  const now = new Date().toISOString();
 
   const { data: path } = await supabase
     .from("learning_paths")
@@ -31,8 +34,14 @@ export async function getStudentDashboard(
     .eq("is_active", true)
     .maybeSingle();
 
-  const [sessionsRes, bookingRes, reportRes, assignmentsRes, evalRes] =
-    await Promise.all([
+  const [
+    sessionsRes,
+    bookingRes,
+    lastBookingRes,
+    reportRes,
+    assignmentsRes,
+    evalRes,
+  ] = await Promise.all([
       path
         ? supabase
             .from("path_sessions")
@@ -45,8 +54,17 @@ export async function getStudentDashboard(
         .select("*")
         .eq("student_id", studentId)
         .eq("status", "scheduled")
-        .gte("starts_at", new Date().toISOString())
+        .gte("starts_at", now)
         .order("starts_at")
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("bookings")
+        .select("*")
+        .eq("student_id", studentId)
+        .in("status", ["scheduled", "completed"])
+        .lt("starts_at", now)
+        .order("starts_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
       supabase
@@ -88,6 +106,7 @@ export async function getStudentDashboard(
     path: (path as LearningPath | null) ?? null,
     sessions,
     nextBooking,
+    lastBooking: (lastBookingRes.data as Booking | null) ?? null,
     latestReport: (reportRes.data as StudentReport | null) ?? null,
     assignments: (assignmentsRes.data ?? []) as Assignment[],
     needsSelfEvaluation: midway && (evalRes.data ?? []).length === 0,
@@ -97,6 +116,45 @@ export async function getStudentDashboard(
       pct: sessions.length ? Math.round((done / sessions.length) * 100) : 0,
     },
   };
+}
+
+/** Progression seule, pour la barre latérale desktop. */
+export async function getPathProgress(studentId: string) {
+  const supabase = await createClient();
+
+  const { data: path } = await supabase
+    .from("learning_paths")
+    .select("id")
+    .eq("student_id", studentId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!path) return null;
+
+  const { data } = await supabase
+    .from("path_sessions")
+    .select("status")
+    .eq("path_id", path.id);
+
+  const total = data?.length ?? 0;
+  const done = (data ?? []).filter((s) => s.status === "done").length;
+  return { total, done, pct: total ? Math.round((done / total) * 100) : 0 };
+}
+
+/**
+ * Nom de l'enseignant, pour « avec Lea ». Jamais l'email : sans nom
+ * renseigné, les pages retombent sur « ton enseignant ».
+ */
+export async function getTeacherName(teacherId: string | null | undefined) {
+  if (!teacherId) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", teacherId)
+    .maybeSingle();
+
+  return data?.full_name?.trim() || null;
 }
 
 export async function getStudentReports(studentId: string) {

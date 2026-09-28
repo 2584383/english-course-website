@@ -114,7 +114,8 @@ export default async function ReportEditorPage({
             <Eyebrow>Rappel</Eyebrow>
             <p className="text-[13px] leading-relaxed text-muted">
               Publier le compte-rendu marque la séance comme faite, déverrouille
-              la suivante dans le parcours et notifie l&apos;apprenant par email.
+              la suivante dans le parcours, donne les devoirs prévus pour elle
+              et notifie l&apos;apprenant par email.
             </p>
           </Card>
         </aside>

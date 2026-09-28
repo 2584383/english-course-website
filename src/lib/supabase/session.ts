@@ -20,12 +20,24 @@ const PUBLIC_PATHS = [
   "/hors-ligne",
 ];
 
+// Appels de service à service (webhook Calendly, Vercel Cron) : pas de session
+// utilisateur, chaque route vérifie elle-même sa signature ou son secret.
+const MACHINE_PREFIXES = ["/api/calendly/", "/api/cron/"];
+
 /**
  * Rafraîchit la session Supabase puis applique le routage par rôle.
  * Le cookie doit être réécrit sur la réponse renvoyée, sinon la session est perdue.
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
+
+  if (
+    MACHINE_PREFIXES.some((prefix) =>
+      request.nextUrl.pathname.startsWith(prefix),
+    )
+  ) {
+    return response;
+  }
 
   if (!publicEnv.supabaseUrl || !publicEnv.supabaseAnonKey) {
     return response;

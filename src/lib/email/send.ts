@@ -49,16 +49,29 @@ async function send({ to, subject, html }: Mail) {
 /* Gabarit commun                                                             */
 /* -------------------------------------------------------------------------- */
 
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+const STUDENT_FOOTER = () => `Tu reçois cet email parce que tu suis un parcours sur English with Lea.
+        Tu peux ajuster tes rappels depuis <a href="${siteUrl()}/app/profil"
+        style="color:#0e474c">ton profil</a>.`;
+
 function layout({
   title,
   body,
   ctaLabel,
   ctaHref,
+  footer = STUDENT_FOOTER(),
 }: {
   title: string;
   body: string;
   ctaLabel?: string;
   ctaHref?: string;
+  footer?: string;
 }) {
   const cta =
     ctaLabel && ctaHref
@@ -81,9 +94,7 @@ function layout({
         </td></tr>
       </table>
       <p style="max-width:520px;margin:20px auto 0;font-size:12px;line-height:1.5;color:#8ba09e">
-        Tu reçois cet email parce que tu suis un parcours sur English with Lea.
-        Tu peux ajuster tes rappels depuis <a href="${siteUrl()}/app/profil"
-        style="color:#0e474c">ton profil</a>.
+        ${footer}
       </p>
     </td></tr>
   </table>
@@ -186,6 +197,46 @@ export function sendSessionReminder({
       }`,
       ctaLabel: "Voir ma séance",
       ctaHref: `${siteUrl()}/app`,
+    }),
+  });
+}
+
+/** Relance enseignant : séances terminées depuis plus de 24 h sans compte-rendu publié. */
+export function sendPendingReportsReminder({
+  to,
+  teacherName,
+  sessions,
+}: {
+  to: string;
+  teacherName: string;
+  sessions: { studentName: string; when: string; bookingId: string }[];
+}) {
+  const count = sessions.length;
+  const list = sessions
+    .map(
+      (s) => `<li style="margin:0 0 8px"><a href="${siteUrl()}/prof/comptes-rendus/${s.bookingId}"
+        style="color:#0e474c;font-weight:700">${escapeHtml(s.studentName)}</a> — ${escapeHtml(s.when)}</li>`,
+    )
+    .join("");
+
+  return send({
+    to,
+    subject:
+      count > 1
+        ? `${count} comptes-rendus en attente`
+        : `Compte-rendu en attente : ${sessions[0].studentName}`,
+    html: layout({
+      title: `${escapeHtml(teacherName.split(" ")[0] || "Bonjour")}, ${
+        count > 1 ? `${count} bilans attendent` : "un bilan attend"
+      } d'être publiés`,
+      body: `<p>${
+        count > 1 ? "Ces séances sont terminées" : "Cette séance est terminée"
+      } depuis plus de 24 h. Tes apprenants attendent leur retour — et leurs
+        devoirs suivants ne partent qu'à la publication.</p>
+        <ul style="padding-left:18px;margin:16px 0 0">${list}</ul>`,
+      ctaLabel: "Ouvrir mes comptes-rendus",
+      ctaHref: `${siteUrl()}/prof/comptes-rendus`,
+      footer: "Relance automatique envoyée une seule fois par séance.",
     }),
   });
 }

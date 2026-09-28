@@ -30,6 +30,11 @@ export type DiscoveryStatus =
 export type ReportStatus = "draft" | "published";
 
 export type AgendaItem = { duration: string; label: string };
+export type HomeworkItem = {
+  title: string;
+  instructions?: string | null;
+  due_label?: string | null;
+};
 export type FollowUp = { label: string; done: boolean };
 export type EvaluationAnswer = { question: string; answer: string };
 
@@ -108,7 +113,7 @@ export type TemplateSession = {
   module: ModuleKind;
   goal: string | null;
   agenda: AgendaItem[];
-  default_homework: string[];
+  default_homework: HomeworkItem[];
 };
 
 export type LearningPath = {
@@ -132,6 +137,9 @@ export type PathSession = {
   module: ModuleKind;
   goal: string | null;
   agenda: AgendaItem[];
+  /** Devoirs à préparer avant cette séance, copiés du gabarit. */
+  homework: HomeworkItem[];
+  homework_assigned_at: string | null;
   status: PathSessionStatus;
   created_at: string;
   updated_at: string;
@@ -289,7 +297,7 @@ export type Database = {
       bookings: Table<Booking>;
       booking_reminders: Table<{
         booking_id: string;
-        offset_label: "d3" | "d1" | "h1";
+        offset_label: "d3" | "d1" | "h1" | "report";
         sent_at: string;
       }>;
       session_reports: Table<SessionReport>;

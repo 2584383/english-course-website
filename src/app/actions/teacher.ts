@@ -9,6 +9,14 @@ import { requireTeacher } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { sendStudentInvitation, sendReportPublished } from "@/lib/email/send";
+import {
+  assignSessionHomework,
+  homeworkFromText,
+  nextPathSessionId,
+  normalizeHomework,
+} from "@/lib/homework";
+import { getCatalogTemplate } from "@/lib/catalog";
+import { insertTemplate, renumberTemplate } from "@/lib/templates";
 import { publicEnv } from "@/lib/env";
 import type { ActionState } from "@/app/actions/auth";
 import type {
@@ -243,6 +251,7 @@ export async function addTemplateSession(
     module: (formData.get("module")?.toString() ?? "other") as ModuleKind,
     goal: formData.get("goal")?.toString() || null,
     agenda: agendaFromText(formData.get("agenda")?.toString() ?? ""),
+    default_homework: homeworkFromText(formData.get("homework")?.toString() ?? ""),
   });
 
   if (error) return { error: error.message };
@@ -256,6 +265,62 @@ export async function addTemplateSession(
   return { success: "Séance ajoutée." };
 }
 
+/**
+ * Modifie une séance du gabarit (titre, module, objectif, ordre du jour,
+ * devoirs). Les devoirs sont répercutés sur les parcours déjà assignés depuis
+ * ce gabarit, tant que la séance ne les a pas distribués.
+ */
+export async function updateTemplateSession(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireTeacher();
+  const supabase = await createClient();
+
+  const sessionId = String(formData.get("sessionId"));
+  const templateId = String(formData.get("templateId"));
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return { error: "Le titre de la séance est obligatoire." };
+
+  const homework = homeworkFromText(formData.get("homework")?.toString() ?? "");
+
+  const { data: before } = await supabase
+    .from("template_sessions")
+    .select("title")
+    .eq("id", sessionId)
+    .single();
+
+  const { error } = await supabase
+    .from("template_sessions")
+    .update({
+      title,
+      module: (formData.get("module")?.toString() ?? "other") as ModuleKind,
+      goal: formData.get("goal")?.toString().trim() || null,
+      agenda: agendaFromText(formData.get("agenda")?.toString() ?? ""),
+      default_homework: homework,
+    })
+    .eq("id", sessionId);
+
+  if (error) return { error: error.message };
+
+  const { data: paths } = await supabase
+    .from("learning_paths")
+    .select("id")
+    .eq("template_id", templateId);
+
+  if (paths?.length && before) {
+    await supabase
+      .from("path_sessions")
+      .update({ homework })
+      .in("path_id", paths.map((p) => p.id))
+      .eq("title", before.title)
+      .is("homework_assigned_at", null);
+  }
+
+  revalidatePath(`/prof/parcours/${templateId}`);
+  return { success: "Séance enregistrée." };
+}
+
 export async function deleteTemplateSession(formData: FormData) {
   await requireTeacher();
   const supabase = await createClient();
@@ -264,7 +329,143 @@ export async function deleteTemplateSession(formData: FormData) {
   const templateId = String(formData.get("templateId"));
 
   await supabase.from("template_sessions").delete().eq("id", id);
+  // Pas de trou dans la numérotation, et un nombre de séances exact
+  await renumberTemplate(supabase, templateId);
   revalidatePath(`/prof/parcours/${templateId}`);
+  revalidatePath("/prof/parcours");
+}
+
+/** Remonte ou descend une séance du gabarit. */
+export async function moveTemplateSession(formData: FormData) {
+  await requireTeacher();
+  const supabase = await createClient();
+
+  const sessionId = String(formData.get("sessionId"));
+  const templateId = String(formData.get("templateId"));
+  const direction = formData.get("direction") === "up" ? -1 : 1;
+
+  const { data: current } = await supabase
+    .from("template_sessions")
+    .select("id, position")
+    .eq("id", sessionId)
+    .single();
+  if (!current) return;
+
+  const { data: neighbour } = await supabase
+    .from("template_sessions")
+    .select("id, position")
+    .eq("template_id", templateId)
+    .eq("position", current.position + direction)
+    .maybeSingle();
+  if (!neighbour) return;
+
+  // Échange en trois temps : contrainte d'unicité (template_id, position)
+  await supabase.from("template_sessions").update({ position: -1 }).eq("id", current.id);
+  await supabase
+    .from("template_sessions")
+    .update({ position: current.position })
+    .eq("id", neighbour.id);
+  await supabase
+    .from("template_sessions")
+    .update({ position: neighbour.position })
+    .eq("id", current.id);
+
+  revalidatePath(`/prof/parcours/${templateId}`);
+}
+
+/** Nom, scénario et description du gabarit. */
+export async function updateTemplate(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireTeacher();
+  const supabase = await createClient();
+
+  const templateId = String(formData.get("templateId"));
+  const name = String(formData.get("name") ?? "").trim();
+  if (name.length < 3) return { error: "Donne un nom au gabarit." };
+
+  const { error } = await supabase
+    .from("path_templates")
+    .update({
+      name,
+      scenario: (formData.get("scenario")?.toString() || null) as Scenario | null,
+      description: formData.get("description")?.toString().trim() || null,
+    })
+    .eq("id", templateId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/prof/parcours/${templateId}`);
+  revalidatePath("/prof/parcours");
+  return { success: "Gabarit enregistré." };
+}
+
+/** Copie un gabarit pour en faire une variante (autre niveau, autre durée…). */
+export async function duplicateTemplate(formData: FormData) {
+  const teacher = await requireTeacher();
+  const supabase = await createClient();
+
+  const templateId = String(formData.get("templateId"));
+  const [{ data: template }, { data: sessions }] = await Promise.all([
+    supabase.from("path_templates").select("*").eq("id", templateId).single(),
+    supabase
+      .from("template_sessions")
+      .select("*")
+      .eq("template_id", templateId)
+      .order("position"),
+  ]);
+  if (!template) return;
+
+  const result = await insertTemplate(supabase, teacher.id, {
+    name: `${template.name} (copie)`,
+    scenario: template.scenario,
+    description: template.description,
+    sessions: (sessions ?? []).map((session) => ({
+      title: session.title,
+      module: session.module,
+      goal: session.goal,
+      agenda: session.agenda,
+      homework: normalizeHomework(session.default_homework),
+    })),
+  });
+  if ("error" in result) return;
+
+  revalidatePath("/prof/parcours");
+  redirect(`/prof/parcours/${result.id}`);
+}
+
+/** Retire un gabarit de la liste ; les parcours déjà assignés ne changent pas. */
+export async function archiveTemplate(formData: FormData) {
+  await requireTeacher();
+  const supabase = await createClient();
+
+  await supabase
+    .from("path_templates")
+    .update({ is_archived: true })
+    .eq("id", String(formData.get("templateId")));
+
+  revalidatePath("/prof/parcours");
+  redirect("/prof/parcours");
+}
+
+/** Copie un gabarit du catalogue intégré dans les gabarits de l'enseignant. */
+export async function installCatalogTemplate(formData: FormData) {
+  const teacher = await requireTeacher();
+  const catalog = getCatalogTemplate(String(formData.get("key")));
+  if (!catalog) return;
+
+  const supabase = await createClient();
+  const result = await insertTemplate(supabase, teacher.id, {
+    name: catalog.name,
+    scenario: catalog.scenario,
+    description: `${catalog.description} Niveau ${catalog.level}.`,
+    sessions: catalog.sessions,
+  });
+  if ("error" in result) return;
+
+  revalidatePath("/prof/parcours");
+  redirect(`/prof/parcours/${result.id}`);
 }
 
 /** Instancie un gabarit en parcours personnalisé (RPC `assign_template`). */
@@ -276,7 +477,7 @@ export async function assignTemplateToStudent(
   const supabase = await createClient();
 
   const studentId = String(formData.get("studentId"));
-  const { error } = await supabase.rpc("assign_template", {
+  const { data: pathId, error } = await supabase.rpc("assign_template", {
     p_template_id: String(formData.get("templateId")),
     p_student_id: studentId,
     p_name: formData.get("name")?.toString() || undefined,
@@ -284,8 +485,22 @@ export async function assignTemplateToStudent(
 
   if (error) return { error: error.message };
 
+  // Les devoirs de la séance 1 partent tout de suite
+  const { data: first } = await supabase
+    .from("path_sessions")
+    .select("id")
+    .eq("path_id", pathId)
+    .order("position")
+    .limit(1)
+    .maybeSingle();
+  const given = first ? await assignSessionHomework(supabase, first.id) : 0;
+
   revalidatePath(`/prof/etudiants/${studentId}`);
-  return { success: "Parcours assigné." };
+  return {
+    success: given
+      ? `Parcours assigné · ${given} devoir${given > 1 ? "s" : ""} donné${given > 1 ? "s" : ""} pour la séance 1.`
+      : "Parcours assigné.",
+  };
 }
 
 /** Réordonne une séance du parcours d'un étudiant (CDC 3.2 : flexibilité). */
@@ -336,6 +551,66 @@ export async function movePathSession(formData: FormData) {
 /* Comptes-rendus                                                             */
 /* -------------------------------------------------------------------------- */
 
+const reportSessionSchema = z.object({
+  studentId: z.string().uuid("Choisis un apprenant."),
+  startsAt: z.string().datetime({ message: "Date ou heure invalide." }),
+  duration: z.coerce.number().int().min(15).max(240),
+  pathSessionId: z.string().uuid().optional(),
+});
+
+/**
+ * Crée une séance hors Calendly (cours donné en direct, séance rattrapée…)
+ * pour pouvoir en rédiger le compte-rendu.
+ */
+export async function createReportSession(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const teacher = await requireTeacher();
+
+  const parsed = reportSessionSchema.safeParse({
+    studentId: formData.get("studentId"),
+    startsAt: formData.get("startsAt"),
+    duration: formData.get("duration"),
+    pathSessionId: formData.get("pathSessionId") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const { studentId, startsAt, duration, pathSessionId } = parsed.data;
+  const start = new Date(startsAt);
+  if (start.getTime() > Date.now() + 5 * 60_000) {
+    return { error: "Un compte-rendu porte sur une séance déjà donnée." };
+  }
+
+  const supabase = await createClient();
+
+  const { data: student } = await supabase
+    .from("student_profiles")
+    .select("id")
+    .eq("id", studentId)
+    .eq("teacher_id", teacher.id)
+    .maybeSingle();
+  if (!student) return { error: "Cet apprenant ne t'est pas affecté." };
+
+  const { data: booking, error } = await supabase
+    .from("bookings")
+    .insert({
+      student_id: studentId,
+      teacher_id: teacher.id,
+      path_session_id: pathSessionId ?? null,
+      starts_at: start.toISOString(),
+      ends_at: new Date(start.getTime() + duration * 60_000).toISOString(),
+      status: "completed",
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/prof/comptes-rendus");
+  redirect(`/prof/comptes-rendus/${booking.id}`);
+}
+
 export async function saveReport(
   _prev: ActionState,
   formData: FormData,
@@ -348,7 +623,7 @@ export async function saveReport(
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, student_id")
+    .select("id, student_id, path_session_id")
     .eq("id", bookingId)
     .single();
 
@@ -382,6 +657,12 @@ export async function saveReport(
     p_report_id: report.id,
   });
   if (publishError) return { error: publishError.message };
+
+  // Séance N bouclée → les devoirs prévus pour la séance N+1 sont donnés
+  if (booking.path_session_id) {
+    const nextId = await nextPathSessionId(supabase, booking.path_session_id);
+    if (nextId) await assignSessionHomework(supabase, nextId);
+  }
 
   const { data: student } = await supabase
     .from("profiles")

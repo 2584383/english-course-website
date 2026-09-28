@@ -1,4 +1,9 @@
-import type { ModuleKind, Scenario, CefrLevel } from "@/lib/database.types";
+import type {
+  CefrLevel,
+  ModuleKind,
+  ResourceKind,
+  Scenario,
+} from "@/lib/database.types";
 
 export function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -34,6 +39,46 @@ export function formatTime(iso: string) {
   }).format(new Date(iso));
 }
 
+/** « 18h30 » */
+export function formatHour(iso: string) {
+  return formatTime(iso).replace(":", "h");
+}
+
+/** « Mardi 22 sept · 18h30 – 19h30 », le format des prototypes. */
+export function formatSlot(startsAt: string, endsAt?: string | null) {
+  const date = new Date(startsAt);
+  const weekday = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: PARIS,
+    weekday: "long",
+  }).format(date);
+  const day = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: PARIS,
+    day: "numeric",
+  }).format(date);
+  const month = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: PARIS,
+    month: "short",
+  })
+    .format(date)
+    .replace(".", "");
+
+  const label = `${weekday[0].toUpperCase()}${weekday.slice(1)} ${day} ${month}`;
+  const time = endsAt
+    ? `${formatHour(startsAt)} – ${formatHour(endsAt)}`
+    : formatHour(startsAt);
+  return `${label} · ${time}`;
+}
+
+/** « 15 sept » */
+export function formatShortDate(iso: string) {
+  return formatDate(iso, { month: "short" }).replace(".", "");
+}
+
+/** Prénom seul, pour « avec Lea », « Bonjour Amina ». */
+export function firstName(name: string | null | undefined, fallback = "") {
+  return name?.trim().split(/\s+/)[0] ?? fallback;
+}
+
 /** « dans 2 jours », « dans 3 h », « hier »… */
 export function relativeLabel(iso: string, now = new Date()) {
   const diffMs = new Date(iso).getTime() - now.getTime();
@@ -65,6 +110,15 @@ export const MODULE_LABELS: Record<ModuleKind, string> = {
   vocabulary: "Vocabulaire",
   grammar: "Grammaire",
   other: "Divers",
+};
+
+/** Libellé court affiché dans la vignette d'une ressource. */
+export const RESOURCE_KIND_LABELS: Record<ResourceKind, string> = {
+  pdf: "PDF",
+  audio: "AUDIO",
+  video: "VIDÉO",
+  link: "LIEN",
+  doc: "DOC",
 };
 
 export const SCENARIO_LABELS: Record<Scenario, string> = {

@@ -1,6 +1,12 @@
 import Link from "next/link";
 
-import { Badge, Card, EmptyState, SectionTitle } from "@/components/ui";
+import {
+  Badge,
+  ButtonLink,
+  Card,
+  EmptyState,
+  SectionTitle,
+} from "@/components/ui";
 import { requireTeacher } from "@/lib/auth";
 import {
   getBookingsAwaitingReport,
@@ -26,14 +32,19 @@ export default async function ReportsQueuePage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <header>
-        <h1 className="font-display text-2xl font-extrabold text-ink">
-          Comptes-rendus
-        </h1>
-        <p className="text-sm text-muted">
-          {awaiting.length + drafts.length} à rédiger · {published.length}{" "}
-          publiés
-        </p>
+      <header className="flex flex-wrap items-center gap-3">
+        <div className="flex-1">
+          <h1 className="font-display text-2xl font-extrabold text-ink">
+            Comptes-rendus
+          </h1>
+          <p className="text-sm text-muted">
+            {awaiting.length + drafts.length} à rédiger · {published.length}{" "}
+            publiés
+          </p>
+        </div>
+        <ButtonLink href="/prof/comptes-rendus/nouveau">
+          + Nouveau compte-rendu
+        </ButtonLink>
       </header>
 
       {awaiting.length > 0 ? (

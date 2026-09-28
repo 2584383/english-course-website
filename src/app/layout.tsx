@@ -3,17 +3,21 @@ import { Nunito_Sans, Quicksand } from "next/font/google";
 
 import "./globals.css";
 
+// Polices variables : toutes les graisses en un seul fichier, et l'axe
+// optique de Nunito Sans adapte le dessin des lettres à la taille du texte.
 const quicksand = Quicksand({
   variable: "--font-quicksand",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  subsets: ["latin", "latin-ext"],
+  weight: "variable",
   display: "swap",
 });
 
 const nunito = Nunito_Sans({
   variable: "--font-nunito",
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
+  subsets: ["latin", "latin-ext"],
+  weight: "variable",
+  style: ["normal", "italic"],
+  axes: ["opsz"],
   display: "swap",
 });
 
@@ -47,7 +51,9 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fr">
+    // Des extensions de navigateur ajoutent des attributs à <html> avant
+    // l'hydratation : on ignore ces écarts sur cette balise uniquement.
+    <html lang="fr" suppressHydrationWarning>
       <body className={`${quicksand.variable} ${nunito.variable} antialiased`}>
         {children}
       </body>

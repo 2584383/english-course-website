@@ -52,6 +52,17 @@ export function TemplateSessionForm({ templateId }: { templateId: string }) {
         />
       </Field>
 
+      <Field
+        label="Devoirs à préparer avant cette séance"
+        hint="Une ligne par devoir, au format « Intitulé | consigne ». Ils sont donnés automatiquement à la publication du compte-rendu de la séance précédente."
+      >
+        <Textarea
+          name="homework"
+          rows={3}
+          placeholder={"Écouter l'audio « Small talk » | Deux écoutes, relève 5 expressions\n2 exemples au format STAR"}
+        />
+      </Field>
+
       <Button type="submit" disabled={pending}>
         {pending ? "Ajout…" : "Ajouter la séance"}
       </Button>

@@ -42,5 +42,4 @@ export const serverEnv = {
   },
   get cronSecret() {
     return process.env.CRON_SECRET ?? "";
-  },
-};
+  },};

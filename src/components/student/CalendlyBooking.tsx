@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { InlineWidget, useCalendlyEventListener } from "react-calendly";
 
-import { Alert, Card } from "@/components/ui";
+import { ActionLink, DoneBadge, Kicker, Panel } from "@/components/student/kit";
 
 /**
  * Widget Calendly intégré (CDC 3.1).
@@ -41,25 +41,45 @@ export function CalendlyBooking({
 
   if (!url) {
     return (
-      <Alert tone="error">
-        Le calendrier n&apos;est pas encore configuré. Renseigne
-        <code className="mx-1">NEXT_PUBLIC_CALENDLY_EVENT_URL</code>
-        dans les variables d&apos;environnement.
-      </Alert>
+      <Panel tone="danger" className="flex flex-col gap-2">
+        <Kicker tone="danger">Calendrier indisponible</Kicker>
+        <p className="text-sm leading-normal text-danger-body">
+          Le calendrier n&apos;est pas encore configuré. Renseigne
+          <code className="mx-1">NEXT_PUBLIC_CALENDLY_EVENT_URL</code>
+          dans les variables d&apos;environnement.
+        </p>
+      </Panel>
     );
   }
 
   if (scheduled) {
     return (
-      <Alert tone="success">
-        Créneau réservé. Tu vas recevoir la confirmation et le lien Google Meet
-        par email — ta séance apparaîtra ici dans quelques secondes.
-      </Alert>
+      <div className="flex flex-col gap-4 pt-6 animate-pop lg:mx-auto lg:max-w-[620px] lg:gap-[18px] lg:pt-10">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <DoneBadge />
+          <p className="font-display text-2xl font-extrabold leading-[1.15] text-ink lg:text-[27px]">
+            C&apos;est réservé
+          </p>
+          {sessionTitle ? (
+            <p className="text-sm leading-[1.45] text-body lg:text-[15px]">
+              {sessionTitle} · 1 h
+            </p>
+          ) : null}
+        </div>
+        <Panel className="flex flex-col gap-[11px]">
+          <Kicker>Visio</Kicker>
+          <p className="text-sm leading-[1.45] text-body lg:text-[14.5px] lg:leading-normal">
+            Ton lien Google Meet est dans l&apos;email de confirmation. Il
+            apparaîtra aussi sur ton accueil dans quelques secondes.
+          </p>
+        </Panel>
+        <ActionLink href="/app">Retour à l&apos;accueil</ActionLink>
+      </div>
     );
   }
 
   return (
-    <Card className="overflow-hidden p-0">
+    <Panel className="overflow-hidden p-0 lg:p-0">
       <InlineWidget
         url={url}
         prefill={{ name: studentName, email: studentEmail }}
@@ -68,11 +88,11 @@ export function CalendlyBooking({
           backgroundColor: "ffffff",
           primaryColor: "0e474c",
           textColor: "123338",
-          hideEventTypeDetails: false,
+          hideEventTypeDetails: true,
           hideGdprBanner: true,
         }}
-        styles={{ height: "720px", width: "100%" }}
+        styles={{ height: "700px", width: "100%" }}
       />
-    </Card>
+    </Panel>
   );
 }

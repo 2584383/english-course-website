@@ -186,7 +186,7 @@ export function ProgressBar({
     <div className="flex flex-col gap-2">
       {label ? (
         <div className="flex items-baseline justify-between">
-          <span className="font-display text-2xl font-extrabold text-ink">
+          <span className="font-display text-2xl font-extrabold tabular-nums text-ink">
             {safe} %
           </span>
           <span className="text-xs text-muted">{label}</span>

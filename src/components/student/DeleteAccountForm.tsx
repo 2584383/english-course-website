@@ -4,7 +4,8 @@ import { useActionState, useState } from "react";
 
 import { deleteMyAccount } from "@/app/actions/rgpd";
 import type { ActionState } from "@/app/actions/auth";
-import { Alert, Button, Field, Input, Textarea } from "@/components/ui";
+import { ActionButton } from "@/components/student/kit";
+import { Alert, Field, Input, Textarea } from "@/components/ui";
 
 const EMPTY: ActionState = {};
 
@@ -14,9 +15,14 @@ export function DeleteAccountForm() {
 
   if (!open) {
     return (
-      <Button tone="danger" onClick={() => setOpen(true)}>
-        Demander la suppression de mon compte
-      </Button>
+      <ActionButton
+        type="button"
+        tone="danger"
+        onClick={() => setOpen(true)}
+        className="w-full lg:w-auto lg:self-start"
+      >
+        Supprimer mon compte
+      </ActionButton>
     );
   }
 
@@ -36,12 +42,22 @@ export function DeleteAccountForm() {
       </Field>
 
       <div className="flex gap-2">
-        <Button type="button" tone="ghost" onClick={() => setOpen(false)}>
+        <ActionButton
+          type="button"
+          tone="quiet"
+          onClick={() => setOpen(false)}
+          className="px-[18px] py-[11px] text-[13px]"
+        >
           Annuler
-        </Button>
-        <Button type="submit" tone="danger" disabled={pending} className="flex-1">
+        </ActionButton>
+        <ActionButton
+          type="submit"
+          tone="danger"
+          disabled={pending}
+          className="flex-1 disabled:opacity-50"
+        >
           {pending ? "Suppression…" : "Supprimer définitivement"}
-        </Button>
+        </ActionButton>
       </div>
     </form>
   );

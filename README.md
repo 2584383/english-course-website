@@ -44,11 +44,13 @@ revanche indispensable.**
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY` *(secrète — jamais côté navigateur)*
-3. Appliquer les migrations, dans l'ordre, depuis le SQL Editor ou la CLI :
+3. Appliquer les migrations avec la CLI Supabase (installée dans le projet) :
 
 ```bash
-npx supabase link --project-ref <ref>
-npx supabase db push
+npm run db:login   # une fois : connexion au compte Supabase (navigateur)
+npm run db:link    # une fois : lie le dépôt au projet (demande le mot de passe de la base)
+npm run db:status  # migrations locales / déjà appliquées
+npm run db:push    # applique celles qui manquent
 ```
 
 | Migration | Contenu |
@@ -56,6 +58,18 @@ npx supabase db push
 | `20260918100000_init_schema.sql` | Types, tables, index, déclencheurs |
 | `20260918100100_rls_policies.sql` | Row Level Security des 3 rôles |
 | `20260918100200_storage_and_rpc.sql` | Bucket privé, RPC métier, vues d'admin |
+| `20260928100000_homework_and_report_reminders.sql` | Devoirs planifiés, relance des comptes-rendus |
+
+> **Migrations appliquées à la main dans le SQL Editor ?** La CLI ne le sait
+> pas et tenterait de les rejouer. Marque-les une fois comme appliquées :
+> `npx supabase migration repair --status applied <version> --linked`
+> (la version est le préfixe numérique du fichier).
+
+**Automatisation.** Le workflow `.github/workflows/supabase-migrations.yml`
+applique les nouvelles migrations à chaque push sur `main` qui touche
+`supabase/migrations/`. Il attend trois secrets GitHub :
+`SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`.
+Pour ajouter une migration : `npm run db:new <nom>`, écrire le SQL, pousser.
 
 4. Créer le premier compte enseignant depuis `Authentication → Users`, en
    ajoutant `{"role": "teacher"}` dans les *user metadata* (le déclencheur
@@ -114,7 +128,7 @@ qui rend la route idempotente face aux relivraisons.
 - Créer une clé sur [resend.com](https://resend.com), vérifier le domaine
   d'envoi, renseigner `RESEND_API_KEY` et `EMAIL_FROM`.
 - Les rappels **J-3 / J-1 / H-1** sont envoyés par `/api/cron/reminders`,
-  déclenché toutes les heures par le cron déclaré dans `vercel.json`.
+  déclenché une fois par jour (7h UTC, plan Vercel Hobby) par le cron déclaré dans `vercel.json` ; le rappel H-1 nécessite un cron horaire (plan Pro).
 - La table `booking_reminders` a pour clé primaire `(booking_id, offset_label)` :
   un rappel ne peut pas partir deux fois, même si le cron rejoue.
 - Protéger la route avec `CRON_SECRET` (Vercel envoie
@@ -249,6 +263,7 @@ npm run build    # build de production
 npm run start    # serveur de production
 npm run lint     # ESLint
 npx tsc --noEmit # vérification des types
+npm run db:push  # applique les migrations Supabase en attente
 ```
 
 ## Déploiement sur Vercel

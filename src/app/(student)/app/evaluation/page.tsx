@@ -1,13 +1,16 @@
 import { SelfEvaluationForm } from "@/components/student/SelfEvaluationForm";
-import { Card, Eyebrow } from "@/components/ui";
+import { BackLink } from "@/components/student/kit";
 import { requireStudent } from "@/lib/auth";
+import { getTeacherName } from "@/lib/queries/student";
+import { firstName } from "@/lib/utils";
 
 export const metadata = { title: "Auto-évaluation" };
 
 /** Questionnaire guidé de mi-parcours (CDC 3.1). */
 const QUESTIONS = [
   {
-    question: "Aujourd'hui, prendre la parole en anglais, ça te fait quoi ?",
+    question:
+      "Aujourd'hui, prendre la parole en anglais en réunion, ça te fait quoi ?",
     options: [
       "Je l'évite encore",
       "J'y vais, mais je prépare tout",
@@ -36,28 +39,17 @@ const QUESTIONS = [
 ];
 
 export default async function SelfEvaluationPage() {
-  await requireStudent();
+  const { studentProfile } = await requireStudent();
+  const teacherName = await getTeacherName(studentProfile?.teacher_id);
 
   return (
-    <div className="flex flex-col gap-4 animate-pop">
-      <header>
-        <h1 className="font-display text-[25px] font-extrabold text-ink">
-          Où tu en es
-        </h1>
-        <p className="text-[13px] text-muted">
-          3 questions, une minute. Tes réponses aident ton enseignant à
-          réajuster la suite du parcours.
-        </p>
-      </header>
-
-      <Card tone="soft" className="flex flex-col gap-1.5">
-        <Eyebrow>Confidentialité</Eyebrow>
-        <p className="text-[13px] leading-relaxed text-brand-900">
-          Seul ton enseignant lit ces réponses. Rien n&apos;est partagé ailleurs.
-        </p>
-      </Card>
-
-      <SelfEvaluationForm questions={QUESTIONS} />
+    <div className="flex flex-col gap-4 animate-pop lg:mx-auto lg:max-w-[680px] lg:gap-5 lg:pt-5">
+      <h1 className="sr-only">Auto-évaluation de mi-parcours</h1>
+      <BackLink href="/app">Plus tard</BackLink>
+      <SelfEvaluationForm
+        questions={QUESTIONS}
+        teacher={firstName(teacherName) || "ton enseignant"}
+      />
     </div>
   );
 }
