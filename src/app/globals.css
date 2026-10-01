@@ -127,6 +127,11 @@
     animation: pop 0.22s ease;
   }
 
+  /* Barre de compte à rebours : la durée est fixée en style inline. */
+  .animate-countdown {
+    animation: countdown linear forwards;
+  }
+
   .safe-bottom {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px));
   }
@@ -140,5 +145,14 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
   }
 }

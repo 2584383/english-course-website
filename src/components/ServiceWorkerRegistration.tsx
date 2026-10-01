@@ -13,6 +13,11 @@ export function ServiceWorkerRegistration() {
         // Installation hors-ligne indisponible : l'application reste utilisable.
       });
     };
+    // Monté dans le layout racine : la page peut être déjà chargée.
+    if (document.readyState === "complete") {
+      register();
+      return;
+    }
     window.addEventListener("load", register);
     return () => window.removeEventListener("load", register);
   }, []);
