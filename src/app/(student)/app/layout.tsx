@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 
 import { BottomNav } from "@/components/student/BottomNav";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
-import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { requireStudent, touchLastSeen } from "@/lib/auth";
 import { getPathProgress } from "@/lib/queries/student";
 import { initials } from "@/lib/utils";
@@ -39,7 +38,6 @@ export default async function StudentLayout({
       </main>
 
       <BottomNav />
-      <ServiceWorkerRegistration />
     </div>
   );
 }

@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Nunito_Sans, Quicksand } from "next/font/google";
 
+import { InstallPrompt } from "@/components/InstallPrompt";
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+
 import "./globals.css";
 
 // Polices variables : toutes les graisses en un seul fichier, et l'axe
@@ -56,6 +59,8 @@ export default function RootLayout({
     <html lang="fr" suppressHydrationWarning>
       <body className={`${quicksand.variable} ${nunito.variable} antialiased`}>
         {children}
+        <InstallPrompt />
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );
