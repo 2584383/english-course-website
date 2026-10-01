@@ -21,7 +21,8 @@ as $$
   where role = 'teacher' and status = 'active';
 $$;
 
-revoke execute on function public.sole_teacher_id() from public;
+-- Réservée aux triggers : Supabase l'expose sinon à anon / authenticated
+revoke execute on function public.sole_teacher_id() from public, anon, authenticated;
 
 -- 1. Rattachement à l'inscription ---------------------------------------------
 create or replace function public.handle_new_user()

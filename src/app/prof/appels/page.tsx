@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { DiscoveryCallForm } from "@/components/teacher/DiscoveryCallForm";
 import { Badge, Card, EmptyState, SectionTitle } from "@/components/ui";
 import { requireTeacher } from "@/lib/auth";
@@ -56,6 +58,14 @@ export default async function DiscoveryCallsPage() {
                   <Badge tone={STATUS[call.status].tone}>
                     {STATUS[call.status].label}
                   </Badge>
+                  {call.student_id ? (
+                    <Link
+                      href={`/prof/etudiants/${call.student_id}`}
+                      className="ml-auto text-xs font-bold text-brand-800"
+                    >
+                      Inscrit · voir la fiche →
+                    </Link>
+                  ) : null}
                 </div>
 
                 <p className="text-xs text-muted">

@@ -6,6 +6,11 @@ import {
   verifyCalendlySignature,
   type CalendlyWebhookEvent,
 } from "@/lib/calendly";
+import {
+  cancelDiscoveryCall,
+  decodeDiscoveryContext,
+  recordDiscoveryCall,
+} from "@/lib/discovery";
 import { sendBookingConfirmation } from "@/lib/email/send";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatDateTime } from "@/lib/utils";
@@ -70,8 +75,13 @@ export async function POST(request: NextRequest) {
       .select("path_session_id")
       .maybeSingle();
 
+    if (!booking) {
+      await cancelDiscoveryCall(admin, eventUri);
+      return NextResponse.json({ ok: true });
+    }
+
     // La séance redevient réservable
-    if (booking?.path_session_id) {
+    if (booking.path_session_id) {
       await admin
         .from("path_sessions")
         .update({ status: "open" })
@@ -92,6 +102,22 @@ export async function POST(request: NextRequest) {
   const scheduled = payload.scheduled_event;
   if (!scheduled?.uri || !scheduled.start_time || !scheduled.end_time) {
     return NextResponse.json({ error: "Créneau incomplet" }, { status: 400 });
+  }
+
+  // Appel de découverte : il alimente le CRM du prof, pas le planning des cours.
+  const discovery = decodeDiscoveryContext(payload.tracking?.utm_content);
+  if (discovery) {
+    const result = await recordDiscoveryCall(admin, {
+      ...discovery,
+      eventUri: scheduled.uri,
+      startTime: scheduled.start_time,
+      endTime: scheduled.end_time,
+    });
+    if ("error" in result) {
+      console.warn("[calendly] appel de découverte non enregistré", result.error);
+      return NextResponse.json({ error: result.error }, { status: 202 });
+    }
+    return NextResponse.json({ ok: true });
   }
 
   // `utm_content` porte « <studentId>:<pathSessionId> », posé par le widget.

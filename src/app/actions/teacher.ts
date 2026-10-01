@@ -61,6 +61,53 @@ export async function claimStudent(formData: FormData) {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Profil public de l'enseignant                                              */
+/* -------------------------------------------------------------------------- */
+
+const teacherProfileSchema = z.object({
+  bio: z.string().trim().max(400, "400 caractères maximum."),
+  discoveryUrl: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === "" || /^https:\/\/calendly\.com\/.+/.test(value),
+      "Colle le lien public de ton événement Calendly (https://calendly.com/…).",
+    ),
+});
+
+/** Présentation et lien d'appel de découverte, montrés aux nouveaux inscrits. */
+export async function updateTeacherProfile(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const teacher = await requireTeacher();
+
+  const parsed = teacherProfileSchema.safeParse({
+    bio: formData.get("bio") ?? "",
+    discoveryUrl: formData.get("discoveryUrl") ?? "",
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      bio: parsed.data.bio || null,
+      discovery_url: parsed.data.discoveryUrl || null,
+    })
+    .eq("id", teacher.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/prof/profil");
+  return {
+    success: parsed.data.discoveryUrl
+      ? "Profil enregistré : les nouveaux inscrits peuvent te choisir."
+      : "Profil enregistré. Sans lien Calendly, tu n'es pas proposé aux nouveaux inscrits.",
+  };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Fiche étudiant                                                             */
 /* -------------------------------------------------------------------------- */
 
