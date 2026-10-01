@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { setBookingAccess } from "@/app/actions/teacher";
+import { claimStudent, setBookingAccess } from "@/app/actions/teacher";
 import { AssignPathForm } from "@/components/teacher/AssignPathForm";
 import { AssignHomeworkForm } from "@/components/teacher/AssignHomeworkForm";
 import { PathEditor } from "@/components/teacher/PathEditor";
@@ -118,6 +118,24 @@ export default async function StudentSheetPage({
         studentProfile={studentProfile as StudentProfile}
         path={(path as LearningPath | null) ?? null}
       />
+
+      {studentProfile.teacher_id === null ? (
+        <Card tone="soft" className="flex flex-wrap items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-ink">
+              Nouvel inscrit, pas encore rattaché
+            </p>
+            <p className="text-xs text-muted">
+              Cet apprenant a créé son compte seul. Il te sera rattaché dès que
+              tu lui assignes un parcours ou enregistres sa fiche.
+            </p>
+          </div>
+          <form action={claimStudent}>
+            <input type="hidden" name="studentId" value={studentId} />
+            <Button type="submit">Rattacher à mon suivi</Button>
+          </form>
+        </Card>
+      ) : null}
 
       <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
         <div className="flex flex-col gap-4">

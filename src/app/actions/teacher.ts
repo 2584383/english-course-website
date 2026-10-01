@@ -29,6 +29,38 @@ import type {
 } from "@/lib/database.types";
 
 /* -------------------------------------------------------------------------- */
+/* Rattachement des étudiants inscrits d'eux-mêmes                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Rattache à l'enseignant un étudiant encore sans enseignant. Sans effet si
+ * l'étudiant est déjà suivi : on ne « vole » jamais l'élève d'un collègue.
+ */
+async function attachIfUnassigned(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  studentId: string,
+  teacherId: string,
+) {
+  await supabase
+    .from("student_profiles")
+    .update({ teacher_id: teacherId })
+    .eq("id", studentId)
+    .is("teacher_id", null);
+}
+
+export async function claimStudent(formData: FormData) {
+  const teacher = await requireTeacher();
+  const supabase = await createClient();
+
+  const studentId = String(formData.get("studentId"));
+  await attachIfUnassigned(supabase, studentId, teacher.id);
+
+  revalidatePath(`/prof/etudiants/${studentId}`);
+  revalidatePath("/prof/etudiants");
+  revalidatePath("/prof");
+}
+
+/* -------------------------------------------------------------------------- */
 /* Fiche étudiant                                                             */
 /* -------------------------------------------------------------------------- */
 
@@ -45,7 +77,7 @@ export async function updateStudentSheet(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireTeacher();
+  const teacher = await requireTeacher();
 
   const parsed = studentSheetSchema.safeParse(
     Object.fromEntries(formData.entries()),
@@ -53,6 +85,7 @@ export async function updateStudentSheet(
   if (!parsed.success) return { error: "Formulaire invalide." };
 
   const supabase = await createClient();
+  await attachIfUnassigned(supabase, parsed.data.studentId, teacher.id);
   const { error } = await supabase
     .from("student_profiles")
     .update({
@@ -72,10 +105,11 @@ export async function updateStudentSheet(
 
 /** Ouvre ou ferme les droits de réservation d'un étudiant (CDC 1.3). */
 export async function setBookingAccess(formData: FormData) {
-  await requireTeacher();
+  const teacher = await requireTeacher();
 
   const studentId = String(formData.get("studentId"));
   const supabase = await createClient();
+  await attachIfUnassigned(supabase, studentId, teacher.id);
 
   await supabase
     .from("profiles")
@@ -473,10 +507,11 @@ export async function assignTemplateToStudent(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireTeacher();
+  const teacher = await requireTeacher();
   const supabase = await createClient();
 
   const studentId = String(formData.get("studentId"));
+  await attachIfUnassigned(supabase, studentId, teacher.id);
   const { data: pathId, error } = await supabase.rpc("assign_template", {
     p_template_id: String(formData.get("templateId")),
     p_student_id: studentId,
@@ -698,6 +733,7 @@ export async function assignHomework(
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { error: "Le titre du devoir est obligatoire." };
 
+  await attachIfUnassigned(supabase, studentId, teacher.id);
   const { error } = await supabase.from("assignments").insert({
     student_id: studentId,
     teacher_id: teacher.id,
@@ -714,10 +750,11 @@ export async function assignHomework(
 }
 
 export async function shareResource(formData: FormData) {
-  await requireTeacher();
+  const teacher = await requireTeacher();
   const supabase = await createClient();
 
   const studentId = String(formData.get("studentId"));
+  await attachIfUnassigned(supabase, studentId, teacher.id);
   await supabase.from("resource_shares").upsert({
     resource_id: String(formData.get("resourceId")),
     student_id: studentId,

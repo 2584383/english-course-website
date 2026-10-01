@@ -31,7 +31,7 @@ export default async function StudentsPage() {
           {students.length === 0 ? (
             <EmptyState
               title="Aucun étudiant pour l'instant"
-              description="Invite ton premier apprenant après l'appel de découverte."
+              description="Invite ton premier apprenant, ou attends qu'il crée son compte : il apparaîtra ici."
             />
           ) : (
             students.map((row) => (
@@ -45,7 +45,10 @@ export default async function StudentsPage() {
 
                   <div className="min-w-0 flex-1">
                     <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-ink">
-                      {row.profile.full_name}
+                      {row.profile.full_name ?? row.profile.email}
+                      {row.unassigned ? (
+                        <Badge tone="brand">Nouvel inscrit</Badge>
+                      ) : null}
                       {row.pendingReport ? (
                         <Badge tone="accent">CR à rédiger</Badge>
                       ) : null}
