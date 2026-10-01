@@ -16,6 +16,7 @@ const ICONS = {
   folder:
     "M3.6 6.6a2 2 0 0 1 2-2h3.1l2 2.4h7.7a2 2 0 0 1 2 2v8.4a2 2 0 0 1-2 2H5.6a2 2 0 0 1-2-2z",
   check: "M4.2 6.4h9.4M4.2 12h7.3M4.2 17.6h5.2M14.6 16.9l2.2 2.2 4.2-4.6",
+  user: "M12 11.6a3.8 3.8 0 1 0 0-7.6 3.8 3.8 0 0 0 0 7.6ZM4.8 20.2a7.2 7.2 0 0 1 14.4 0",
 } as const;
 
 export type SidebarCounts = {
@@ -50,6 +51,7 @@ export function Sidebar({ counts }: { counts: SidebarCounts }) {
       icon: ICONS.check,
       badge: counts.reports,
     },
+    { href: "/prof/profil", label: "Mon profil", icon: ICONS.user },
   ];
 
   return (

@@ -7,6 +7,12 @@ import { z } from "zod";
 
 import { requireStudent } from "@/lib/auth";
 import { AVAILABILITY_OPTIONS } from "@/lib/constants";
+import {
+  fetchCalendlyEvent,
+  getStudentDiscoveryCall,
+  recordDiscoveryCall,
+} from "@/lib/discovery";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/app/actions/auth";
 
@@ -45,6 +51,51 @@ export async function completeOnboarding(
 
   revalidatePath("/app", "layout");
   redirect("/app");
+}
+
+/**
+ * Appelée par le widget dès que l'étudiant a réservé son appel de découverte :
+ * l'appel apparaît tout de suite chez le prof, sans attendre le webhook.
+ */
+export async function confirmDiscoveryBooking(
+  teacherId: string,
+  eventUri: string,
+): Promise<{ error?: string; scheduledAt?: string | null }> {
+  const session = await requireStudent();
+  if (
+    !z.string().uuid().safeParse(teacherId).success ||
+    !/^https:\/\/api\.calendly\.com\/scheduled_events\/[\w-]+$/.test(eventUri)
+  ) {
+    return { error: "Réservation incomplète." };
+  }
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return { error: "Enregistrement indisponible pour le moment." };
+  }
+
+  // Un seul appel en cours par étudiant : l'appel vient du navigateur, on ne
+  // laisse pas remplir le CRM du prof d'événements à la chaîne.
+  const existing = await getStudentDiscoveryCall(admin, session.id);
+  if (existing && existing.eventUri !== eventUri) {
+    return { error: "Tu as déjà un appel de découverte réservé." };
+  }
+
+  const event = await fetchCalendlyEvent(eventUri);
+  const result = await recordDiscoveryCall(admin, {
+    studentId: session.id,
+    teacherId,
+    eventUri,
+    startTime: event?.startTime,
+    endTime: event?.endTime,
+  });
+  if ("error" in result) return { error: result.error };
+
+  revalidatePath("/app", "layout");
+  revalidatePath("/bienvenue");
+  return { scheduledAt: event?.startTime ?? null };
 }
 
 export async function toggleAssignment(assignmentId: string, done: boolean) {

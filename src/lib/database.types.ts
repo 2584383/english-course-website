@@ -49,6 +49,10 @@ export type Profile = {
   booking_enabled: boolean;
   booking_credits: number;
   last_seen_at: string | null;
+  /** Présentation de l'enseignant, montrée à l'étudiant qui choisit son prof. */
+  bio: string | null;
+  /** Lien Calendly de l'appel de découverte de l'enseignant. */
+  discovery_url: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -89,6 +93,9 @@ export type DiscoveryCall = {
   notes: string | null;
   follow_ups: FollowUp[];
   converted_student_id: string | null;
+  /** Compte de l'étudiant qui a réservé l'appel depuis l'application. */
+  student_id: string | null;
+  calendly_event_uri: string | null;
   created_at: string;
   updated_at: string;
 };
