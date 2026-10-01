@@ -18,9 +18,14 @@ export type StudentRow = {
   progress: { done: number; total: number; pct: number };
   nextBooking: Booking | null;
   pendingReport: boolean;
+  /** Inscrit seul, pas encore rattaché à un enseignant. */
+  unassigned: boolean;
 };
 
-/** Liste des étudiants affectés à l'enseignant, avec leurs indicateurs de suivi. */
+/**
+ * Étudiants de l'enseignant, plus les inscrits encore sans enseignant,
+ * avec leurs indicateurs de suivi.
+ */
 export async function getTeacherStudents(
   teacherId: string,
 ): Promise<StudentRow[]> {
@@ -29,7 +34,7 @@ export async function getTeacherStudents(
   const { data: studentProfiles } = await supabase
     .from("student_profiles")
     .select("*")
-    .eq("teacher_id", teacherId);
+    .or(`teacher_id.eq.${teacherId},teacher_id.is.null`);
 
   const rows = (studentProfiles ?? []) as StudentProfile[];
   if (rows.length === 0) return [];
@@ -97,11 +102,15 @@ export async function getTeacherStudents(
         nextBooking:
           bookings.find((b) => b.student_id === studentProfile.id) ?? null,
         pendingReport: drafts.has(studentProfile.id),
+        unassigned: studentProfile.teacher_id === null,
       } satisfies StudentRow;
     })
     .filter((row): row is StudentRow => row !== null)
-    .sort((a, b) =>
-      (a.profile.full_name ?? "").localeCompare(b.profile.full_name ?? ""),
+    // Les nouveaux inscrits à rattacher en tête de liste
+    .sort(
+      (a, b) =>
+        Number(b.unassigned) - Number(a.unassigned) ||
+        (a.profile.full_name ?? "").localeCompare(b.profile.full_name ?? ""),
     );
 }
 

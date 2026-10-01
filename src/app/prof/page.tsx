@@ -22,8 +22,14 @@ export default async function TeacherTodayPage() {
 
   const byId = new Map(students.map((row) => [row.profile.id, row]));
 
+  // Nouveaux inscrits : à rattacher ou sans parcours, ils attendent l'enseignant
+  const toOnboard = students.filter((row) => row.unassigned || !row.path);
+  const onboardIds = new Set(toOnboard.map((row) => row.profile.id));
+
   // Étudiants sans séance à venir depuis longtemps : à relancer
-  const toFollowUp = students.filter((row) => !row.nextBooking);
+  const toFollowUp = students.filter(
+    (row) => !row.nextBooking && !onboardIds.has(row.profile.id),
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -132,6 +138,32 @@ export default async function TeacherTodayPage() {
             </Card>
           ) : null}
 
+          {toOnboard.length > 0 ? (
+            <Card tone="soft" className="flex flex-col gap-2">
+              <Eyebrow>Nouveaux étudiants</Eyebrow>
+              <p className="text-xs text-muted">
+                Assigne-leur un parcours et complète leur fiche.
+              </p>
+              <ul className="flex flex-col gap-1.5">
+                {toOnboard.slice(0, 6).map((row) => (
+                  <li key={row.profile.id}>
+                    <Link
+                      href={`/prof/etudiants/${row.profile.id}`}
+                      className="flex items-baseline justify-between gap-2 text-sm text-ink no-underline"
+                    >
+                      <span className="font-semibold">
+                        {row.profile.full_name ?? row.profile.email}
+                      </span>
+                      <span className="text-xs text-brand-700">
+                        {row.unassigned ? "À rattacher" : "Sans parcours"}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+
           {toFollowUp.length > 0 ? (
             <Card className="flex flex-col gap-2">
               <Eyebrow>Étudiants à relancer</Eyebrow>
@@ -160,7 +192,9 @@ export default async function TeacherTodayPage() {
             </Card>
           ) : null}
 
-          {awaitingReport.length === 0 && toFollowUp.length === 0 ? (
+          {awaitingReport.length === 0 &&
+          toOnboard.length === 0 &&
+          toFollowUp.length === 0 ? (
             <EmptyState title="Rien en attente" description="Tout est à jour." />
           ) : null}
         </section>
