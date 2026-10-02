@@ -49,7 +49,7 @@ export default async function TeacherLayout({
               {profile.role === "super_admin" ? "Administrateur" : "Enseignant"}
             </p>
           </div>
-          <Avatar label={initials(profile.full_name)} size={38} />
+          <Avatar label={initials(profile.full_name)} src={profile.avatar_url} size={38} />
           <form action={signOut}>
             <button
               type="submit"

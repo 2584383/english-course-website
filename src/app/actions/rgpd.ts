@@ -25,6 +25,14 @@ export async function deleteMyAccount(
   }
 
   const supabase = await createClient();
+  // Avant l'anonymisation : l'utilisateur peut encore effacer ses propres photos
+  const { data: photos } = await supabase.storage.from("avatars").list(session.id);
+  if (photos?.length) {
+    await supabase.storage
+      .from("avatars")
+      .remove(photos.map((photo) => `${session.id}/${photo.name}`));
+  }
+
   const { error } = await supabase.rpc("request_account_deletion", {
     p_reason: formData.get("reason")?.toString() || undefined,
   });

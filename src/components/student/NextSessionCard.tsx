@@ -1,4 +1,5 @@
 import { Kicker, Panel, actionClass } from "@/components/student/kit";
+import { Avatar } from "@/components/ui";
 import type { Booking, PathSession } from "@/lib/database.types";
 import { cn, formatSlot, isMeetOpen, relativeLabel } from "@/lib/utils";
 
@@ -9,9 +10,11 @@ import { cn, formatSlot, isMeetOpen, relativeLabel } from "@/lib/utils";
 export function NextSessionCard({
   booking,
   teacherName,
+  teacherAvatarUrl,
 }: {
   booking: Booking & { session: PathSession | null };
   teacherName: string | null;
+  teacherAvatarUrl?: string | null;
 }) {
   const meetOpen = isMeetOpen(booking.starts_at);
   const when = formatSlot(booking.starts_at, booking.ends_at);
@@ -61,9 +64,17 @@ export function NextSessionCard({
           <p className="font-display text-xl font-bold leading-[1.2] text-ink lg:text-[25px]">
             {title}
           </p>
-          <p className="mt-0.5 text-sm leading-[1.45] text-body lg:mt-[7px] lg:text-[15px]">
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm leading-[1.45] text-body lg:mt-[7px] lg:text-[15px]">
             {when}
-            {teacherName ? ` · avec ${teacherName}` : ""}
+            {teacherName ? (
+              <span className="inline-flex items-center gap-1.5">
+                ·
+                {teacherAvatarUrl ? (
+                  <Avatar label="" src={teacherAvatarUrl} size={22} />
+                ) : null}
+                avec {teacherName}
+              </span>
+            ) : null}
           </p>
         </div>
       </div>

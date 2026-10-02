@@ -27,6 +27,7 @@ export default async function StudentLayout({
         name={profile.full_name ?? profile.email}
         email={profile.email}
         initial={initials(profile.full_name, "?").slice(0, 1)}
+        avatarUrl={profile.avatar_url}
         progress={progress}
       />
 

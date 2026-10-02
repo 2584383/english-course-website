@@ -38,7 +38,7 @@ export default async function AdminLayout({
             ))}
           </nav>
 
-          <Avatar label={initials(profile.full_name)} size={36} />
+          <Avatar label={initials(profile.full_name)} src={profile.avatar_url} size={36} />
           <form action={signOut}>
             <button
               type="submit"

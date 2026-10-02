@@ -3,8 +3,10 @@ import Link from "next/link";
 import { signOut } from "@/app/actions/auth";
 import { NotificationToggles } from "@/components/student/NotificationToggles";
 import { ActionButton, Chevron, Kicker, Panel } from "@/components/student/kit";
+import { AvatarUploader } from "@/components/AvatarUploader";
+import { Avatar } from "@/components/ui";
 import { requireStudent } from "@/lib/auth";
-import { getTeacherName } from "@/lib/queries/student";
+import { getTeacher } from "@/lib/queries/student";
 import { createClient } from "@/lib/supabase/server";
 import { SCENARIO_LABELS, cn, firstName, initials, levelLabel } from "@/lib/utils";
 
@@ -18,7 +20,7 @@ export default async function ProfilePage() {
   const { profile, studentProfile } = await requireStudent();
 
   const supabase = await createClient();
-  const [{ data: prefs }, { data: path }, teacherName] = await Promise.all([
+  const [{ data: prefs }, { data: path }, teacherCard] = await Promise.all([
     supabase
       .from("notification_preferences")
       .select("*")
@@ -30,9 +32,10 @@ export default async function ProfilePage() {
       .eq("student_id", profile.id)
       .eq("is_active", true)
       .maybeSingle(),
-    getTeacherName(studentProfile?.teacher_id),
+    getTeacher(studentProfile?.teacher_id),
   ]);
 
+  const teacherName = teacherCard?.name ?? null;
   const teacher = teacherName ? firstName(teacherName) : null;
   const level = levelLabel(
     studentProfile?.initial_level ?? null,
@@ -53,21 +56,28 @@ export default async function ProfilePage() {
 
   return (
     <div className="flex max-w-[1020px] flex-col gap-3.5 animate-pop lg:gap-5">
-      <header className="flex items-center gap-3.5 pt-1.5 lg:gap-4 lg:pt-0">
-        <span className="flex size-[58px] flex-none items-center justify-center rounded-full border border-soft-border bg-soft font-display text-xl font-extrabold text-brand-800 lg:size-16 lg:text-[22px]">
-          {initials(profile.full_name).slice(0, 1)}
-        </span>
-        <div className="min-w-0">
-          <h1 className="font-display text-[22px] font-extrabold leading-[1.15] text-ink lg:text-[27px]">
-            {profile.full_name ?? profile.email}
-          </h1>
-          <p className="truncate text-[13px] leading-snug text-brand-500 lg:mt-[3px] lg:text-[13.5px]">
-            {profile.email}
-          </p>
-        </div>
+      <header className="pt-1.5 lg:pt-0">
+        <h1 className="font-display text-[22px] font-extrabold leading-[1.15] text-ink lg:text-[27px]">
+          {profile.full_name ?? profile.email}
+        </h1>
+        <p className="truncate text-[13px] leading-snug text-brand-500 lg:mt-[3px] lg:text-[13.5px]">
+          {profile.email}
+        </p>
       </header>
 
       <div className="grid items-start gap-3.5 lg:grid-cols-[repeat(auto-fit,minmax(300px,1fr))] lg:gap-4">
+        <Panel className="flex flex-col gap-3">
+          <Kicker>Ma photo</Kicker>
+          <AvatarUploader
+            src={profile.avatar_url}
+            label={initials(profile.full_name).slice(0, 1)}
+            size={64}
+          />
+          <p className="text-xs leading-[1.4] text-muted">
+            Visible uniquement par ton prof. Facultatif.
+          </p>
+        </Panel>
+
         <Panel tone="soft" className="flex flex-col gap-1.5">
           <Kicker tone="brand">Mon cadre</Kicker>
           <p className="text-[14.5px] font-semibold leading-[1.45] text-deep lg:text-[15.5px]">
@@ -83,10 +93,19 @@ export default async function ProfilePage() {
               Disponibilités : {studentProfile.availability.join(" · ")}
             </p>
           ) : null}
-          <p className="mt-[3px] text-xs leading-[1.4] text-muted">
-            Défini avec {teacher ?? "ton enseignant"} pendant l&apos;appel de
-            découverte.
-          </p>
+          <div className="mt-[3px] flex items-center gap-2">
+            {teacherCard ? (
+              <Avatar
+                label={initials(teacherCard.name).slice(0, 1)}
+                src={teacherCard.avatarUrl}
+                size={28}
+              />
+            ) : null}
+            <p className="text-xs leading-[1.4] text-muted">
+              Défini avec {teacher ?? "ton enseignant"} pendant l&apos;appel de
+              découverte.
+            </p>
+          </div>
         </Panel>
 
         {goal ? (

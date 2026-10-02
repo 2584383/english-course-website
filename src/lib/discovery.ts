@@ -10,6 +10,7 @@ export type TeacherCard = {
   id: string;
   name: string;
   bio: string | null;
+  avatarUrl: string | null;
   discoveryUrl: string;
 };
 
@@ -46,7 +47,7 @@ export function decodeDiscoveryContext(value: string | null | undefined) {
 export async function listDiscoveryTeachers(admin: Admin): Promise<TeacherCard[]> {
   const { data } = await admin
     .from("profiles")
-    .select("id, full_name, email, bio, discovery_url")
+    .select("id, full_name, email, bio, avatar_url, discovery_url")
     .in("role", ["teacher", "super_admin"])
     .eq("status", "active")
     .not("discovery_url", "is", null)
@@ -58,6 +59,7 @@ export async function listDiscoveryTeachers(admin: Admin): Promise<TeacherCard[]
       id: teacher.id,
       name: teacher.full_name?.trim() || teacher.email,
       bio: teacher.bio,
+      avatarUrl: teacher.avatar_url,
       discoveryUrl: teacher.discovery_url!.trim(),
     }));
 }

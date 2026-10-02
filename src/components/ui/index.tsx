@@ -253,20 +253,33 @@ export function Alert({
   );
 }
 
+/** Photo de profil, ou initiales tant qu'aucune photo n'a été ajoutée. */
 export function Avatar({
   label,
+  src,
   size = 44,
+  className,
 }: {
   label: string;
+  src?: string | null;
   size?: number;
+  className?: string;
 }) {
   return (
     <span
       aria-hidden
-      className="inline-flex flex-none items-center justify-center rounded-full border border-soft-border bg-soft font-display font-extrabold text-brand-800"
+      className={cn(
+        "inline-flex flex-none items-center justify-center overflow-hidden rounded-full border border-soft-border bg-soft font-display font-extrabold text-brand-800",
+        className,
+      )}
       style={{ width: size, height: size, fontSize: size * 0.36 }}
     >
-      {label}
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" className="size-full object-cover" loading="lazy" />
+      ) : (
+        label
+      )}
     </span>
   );
 }
