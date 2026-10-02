@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { DiscoveryCallForm } from "@/components/teacher/DiscoveryCallForm";
+import { InviteFromCallButton } from "@/components/teacher/InviteFromCallButton";
 import { Badge, Card, EmptyState, SectionTitle } from "@/components/ui";
 import { requireTeacher } from "@/lib/auth";
 import { getDiscoveryCalls } from "@/lib/queries/teacher";
@@ -65,6 +66,13 @@ export default async function DiscoveryCallsPage() {
                     >
                       Inscrit · voir la fiche →
                     </Link>
+                  ) : call.email && call.status !== "lost" ? (
+                    <div className="ml-auto">
+                      <InviteFromCallButton
+                        email={call.email}
+                        fullName={call.full_name}
+                      />
+                    </div>
                   ) : null}
                 </div>
 

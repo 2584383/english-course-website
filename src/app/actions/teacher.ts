@@ -75,7 +75,7 @@ const teacherProfileSchema = z.object({
     ),
 });
 
-/** Présentation et lien d'appel de découverte, montrés aux nouveaux inscrits. */
+/** Présentation et lien d'appel de découverte, montrés aux visiteurs. */
 export async function updateTeacherProfile(
   _prev: ActionState,
   formData: FormData,
@@ -102,8 +102,8 @@ export async function updateTeacherProfile(
   revalidatePath("/prof/profil");
   return {
     success: parsed.data.discoveryUrl
-      ? "Profil enregistré : les nouveaux inscrits peuvent te choisir."
-      : "Profil enregistré. Sans lien Calendly, tu n'es pas proposé aux nouveaux inscrits.",
+      ? "Profil enregistré : les visiteurs peuvent te choisir pour leur appel découverte."
+      : "Profil enregistré. Sans lien Calendly, tu n'es pas proposé pour les appels découverte.",
   };
 }
 
@@ -225,6 +225,7 @@ export async function inviteStudent(
   });
 
   revalidatePath("/prof/etudiants");
+  revalidatePath("/prof/appels");
   return { success: `Invitation envoyée à ${parsed.data.email}.` };
 }
 

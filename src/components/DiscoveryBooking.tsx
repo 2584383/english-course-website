@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 
 import { InlineWidget, useCalendlyEventListener } from "react-calendly";
 
-import { confirmDiscoveryBooking } from "@/app/actions/student";
 import { ActionLink, DoneBadge, Kicker, Panel } from "@/components/student/kit";
-import { Alert, Avatar } from "@/components/ui";
-import { cn, formatDateTime, initials } from "@/lib/utils";
+import { Avatar } from "@/components/ui";
+import { cn, initials } from "@/lib/utils";
 
 export type DiscoveryTeacher = {
   id: string;
@@ -20,49 +19,19 @@ export type DiscoveryTeacher = {
 };
 
 /**
- * Choix du prof puis réservation de l'appel de découverte dans son Calendly.
- * L'appel est enregistré dès la confirmation du widget ; le webhook (contexte
- * `discovery:` dans `utm_content`) prend le relais si l'onglet est fermé trop tôt.
+ * Choix du prof puis réservation de l'appel de découverte dans son Calendly,
+ * sans compte. Le webhook Calendly (contexte `decouverte:` dans `utm_content`)
+ * inscrit l'appel dans le CRM du prof choisi.
  */
-export function DiscoveryBooking({
-  teachers,
-  studentName,
-  studentEmail,
-  defaultTeacherId,
-  continueHref,
-}: {
-  teachers: DiscoveryTeacher[];
-  studentName: string;
-  studentEmail: string;
-  defaultTeacherId?: string | null;
-  continueHref: string;
-}) {
+export function DiscoveryBooking({ teachers }: { teachers: DiscoveryTeacher[] }) {
   const [teacherId, setTeacherId] = useState<string | null>(
-    defaultTeacherId && teachers.some((t) => t.id === defaultTeacherId)
-      ? defaultTeacherId
-      : teachers.length === 1
-        ? teachers[0].id
-        : null,
+    teachers.length === 1 ? teachers[0].id : null,
   );
-  const [booked, setBooked] = useState<{ when: string | null } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, startSaving] = useTransition();
+  const [booked, setBooked] = useState(false);
 
   const teacher = teachers.find((t) => t.id === teacherId) ?? null;
 
-  useCalendlyEventListener({
-    onEventScheduled: (event) => {
-      if (!teacher) return;
-      const eventUri = event.data.payload.event.uri;
-      startSaving(async () => {
-        const result = await confirmDiscoveryBooking(teacher.id, eventUri);
-        // L'appel est réservé côté Calendly quoi qu'il arrive : on confirme,
-        // en signalant seulement un éventuel retard d'affichage.
-        if (result.error) setError(result.error);
-        setBooked({ when: result.scheduledAt ?? null });
-      });
-    },
-  });
+  useCalendlyEventListener({ onEventScheduled: () => setBooked(true) });
 
   if (booked) {
     return (
@@ -72,26 +41,21 @@ export function DiscoveryBooking({
           <p className="font-display text-2xl font-extrabold leading-[1.15] text-ink">
             Appel réservé
           </p>
-          <p className="text-sm leading-[1.45] text-body">
-            {booked.when ? `${formatDateTime(booked.when)} · ` : ""}avec{" "}
-            {teacher?.name}
-          </p>
+          {teacher ? (
+            <p className="text-sm leading-[1.45] text-body">avec {teacher.name}</p>
+          ) : null}
         </div>
-        {error ? (
-          <Alert tone="error">
-            Ton appel est bien réservé, mais il mettra quelques minutes à
-            apparaître chez ton prof.
-          </Alert>
-        ) : null}
         <Panel className="flex flex-col gap-2">
           <Kicker>Et ensuite ?</Kicker>
           <p className="text-sm leading-[1.45] text-body">
-            Le lien de l&apos;appel est dans l&apos;email de confirmation de
-            Calendly. Après votre échange, ton prof prépare ton parcours sur
-            mesure.
+            Tu reçois un email de confirmation avec le lien de l&apos;appel. Si
+            tu décides de te lancer après votre échange, ton prof t&apos;envoie
+            une invitation pour créer ton espace et découvrir ton parcours.
           </p>
         </Panel>
-        <ActionLink href={continueHref}>Continuer</ActionLink>
+        <ActionLink href="/" tone="quiet">
+          Retour à l&apos;accueil
+        </ActionLink>
       </div>
     );
   }
@@ -154,7 +118,6 @@ export function DiscoveryBooking({
             <InlineWidget
               key={teacher.id}
               url={teacher.discoveryUrl}
-              prefill={{ name: studentName, email: studentEmail }}
               utm={{
                 utmContent: teacher.utmContent,
                 utmCampaign: "appel-decouverte",
@@ -168,11 +131,6 @@ export function DiscoveryBooking({
               styles={{ height: "680px", width: "100%" }}
             />
           </Panel>
-          {saving ? (
-            <p className="text-xs text-muted" role="status">
-              Enregistrement de ton appel…
-            </p>
-          ) : null}
         </div>
       ) : null}
     </div>

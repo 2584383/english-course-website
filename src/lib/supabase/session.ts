@@ -15,6 +15,7 @@ const PUBLIC_PATHS = [
   "/",
   "/connexion",
   "/inscription",
+  "/appel-decouverte",
   "/confidentialite",
   "/cgu",
   "/hors-ligne",
@@ -101,10 +102,13 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Préfixes stricts : « /app » ne doit pas attraper « /appel-decouverte »
+  const under = (prefix: string) =>
+    pathname === prefix || pathname.startsWith(`${prefix}/`);
   const forbidden =
-    (pathname.startsWith("/admin") && role !== "super_admin") ||
-    (pathname.startsWith("/prof") && role === "student") ||
-    (pathname.startsWith("/app") && role !== "student");
+    (under("/admin") && role !== "super_admin") ||
+    (under("/prof") && role === "student") ||
+    (under("/app") && role !== "student");
 
   if (forbidden) {
     const url = request.nextUrl.clone();
