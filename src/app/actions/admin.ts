@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireAdmin } from "@/lib/auth";
+import { deleteAvatarFiles } from "@/lib/avatars";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { publicEnv } from "@/lib/env";
@@ -106,6 +107,7 @@ export async function deleteUser(
 
   try {
     const admin = createAdminClient();
+    await deleteAvatarFiles(admin, userId);
     const { error } = await admin.auth.admin.deleteUser(userId);
     if (error) return { error: error.message };
   } catch {

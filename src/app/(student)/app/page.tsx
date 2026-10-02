@@ -11,9 +11,10 @@ import {
   PageHeader,
   TextLink,
 } from "@/components/student/kit";
+import { Avatar } from "@/components/ui";
 import { requireStudent } from "@/lib/auth";
 import { getDiscoveryState } from "@/lib/discovery";
-import { getStudentDashboard, getTeacherName } from "@/lib/queries/student";
+import { getStudentDashboard, getTeacher } from "@/lib/queries/student";
 import { groupWork } from "@/lib/student-work";
 import { firstName, formatShortDate, initials } from "@/lib/utils";
 
@@ -26,9 +27,9 @@ export const metadata = { title: "Accueil" };
  */
 export default async function StudentHomePage() {
   const { profile, studentProfile } = await requireStudent();
-  const [dashboard, teacherName, discovery] = await Promise.all([
+  const [dashboard, teacherCard, discovery] = await Promise.all([
     getStudentDashboard(profile.id),
-    getTeacherName(studentProfile?.teacher_id),
+    getTeacher(studentProfile?.teacher_id),
     getDiscoveryState(profile.id),
   ]);
   const {
@@ -42,6 +43,7 @@ export default async function StudentHomePage() {
     needsSelfEvaluation,
   } = dashboard;
 
+  const teacherName = teacherCard?.name ?? null;
   const teacher = firstName(teacherName) || "ton enseignant";
   const Teacher = teacher[0].toUpperCase() + teacher.slice(1);
   const work = groupWork({ assignments, sessions, nextBooking, lastBooking });
@@ -64,9 +66,13 @@ export default async function StudentHomePage() {
             <Link
               href="/app/profil"
               aria-label="Mon profil"
-              className="flex size-[46px] flex-none items-center justify-center rounded-full border border-soft-border bg-soft font-display text-base font-extrabold text-brand-800 no-underline lg:hidden"
+              className="flex-none rounded-full no-underline lg:hidden"
             >
-              {initials(profile.full_name).slice(0, 1)}
+              <Avatar
+                label={initials(profile.full_name).slice(0, 1)}
+                src={profile.avatar_url}
+                size={46}
+              />
             </Link>
             <ActionLink
               href="/app/reserver"
@@ -133,6 +139,7 @@ export default async function StudentHomePage() {
             <NextSessionCard
               booking={nextBooking}
               teacherName={teacherName ? firstName(teacherName) : null}
+              teacherAvatarUrl={teacherCard?.avatarUrl}
             />
           ) : !isFirstVisit && path ? (
             <Panel tone="soft" size="lg" className="flex flex-col gap-2.5 lg:p-[26px]">

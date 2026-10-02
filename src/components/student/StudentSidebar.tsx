@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { STUDENT_TABS, TabIcon } from "@/components/student/nav";
+import { Avatar } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 /** Navigation latérale permanente du prototype desktop (≥ 1024 px). */
@@ -11,11 +12,13 @@ export function StudentSidebar({
   name,
   email,
   initial,
+  avatarUrl,
   progress,
 }: {
   name: string;
   email: string;
   initial: string;
+  avatarUrl: string | null;
   progress: { pct: number } | null;
 }) {
   const pathname = usePathname();
@@ -89,9 +92,8 @@ export function StudentSidebar({
           href="/app/profil"
           className="flex items-center gap-2.5 rounded-xl px-1.5 py-2 no-underline transition hover:bg-white/[.08]"
         >
-          <span className="flex size-8 flex-none items-center justify-center rounded-full border border-soft-border bg-soft font-display text-[13px] font-extrabold text-brand-800">
-            {initial}
-          </span>
+          <Avatar label={initial} src={avatarUrl} size={32} />
+
           <span className="min-w-0">
             <span className="block font-display text-[13px] font-bold leading-tight text-white">
               {name}

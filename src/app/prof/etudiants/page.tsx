@@ -41,7 +41,7 @@ export default async function StudentsPage() {
                 className="block no-underline"
               >
                 <Card className="flex flex-wrap items-center gap-3 transition hover:border-brand-300">
-                  <Avatar label={initials(row.profile.full_name)} size={40} />
+                  <Avatar label={initials(row.profile.full_name)} src={row.profile.avatar_url} size={40} />
 
                   <div className="min-w-0 flex-1">
                     <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-ink">

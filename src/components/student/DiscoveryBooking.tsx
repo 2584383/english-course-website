@@ -6,13 +6,14 @@ import { InlineWidget, useCalendlyEventListener } from "react-calendly";
 
 import { confirmDiscoveryBooking } from "@/app/actions/student";
 import { ActionLink, DoneBadge, Kicker, Panel } from "@/components/student/kit";
-import { Alert } from "@/components/ui";
+import { Alert, Avatar } from "@/components/ui";
 import { cn, formatDateTime, initials } from "@/lib/utils";
 
 export type DiscoveryTeacher = {
   id: string;
   name: string;
   bio: string | null;
+  avatarUrl: string | null;
   discoveryUrl: string;
   /** `utm_content` calculé côté serveur (`encodeDiscoveryContext`). */
   utmContent: string;
@@ -121,9 +122,7 @@ export function DiscoveryBooking({
                 onChange={() => setTeacherId(t.id)}
                 className="sr-only"
               />
-              <span className="flex size-10 flex-none items-center justify-center rounded-full bg-brand-800 font-display text-sm font-extrabold text-white">
-                {initials(t.name)}
-              </span>
+              <Avatar label={initials(t.name)} src={t.avatarUrl} size={48} />
               <span className="min-w-0 flex-1">
                 <span className="block font-display text-[15px] font-bold text-ink">
                   {t.name}

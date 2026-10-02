@@ -12,6 +12,13 @@ export default function PrivacyPolicyPage() {
           horaire.
         </li>
         <li>
+          <strong>Photo de profil</strong> (facultative) : celle d&apos;un
+          apprenant n&apos;est visible que par son enseignant et
+          l&apos;administrateur ; celle d&apos;un enseignant est visible par
+          les apprenants. Elle peut être modifiée ou supprimée à tout moment
+          depuis le profil, et est effacée avec le compte.
+        </li>
+        <li>
           <strong>Données pédagogiques</strong> : niveau CECRL estimé,
           objectifs, parcours, comptes-rendus de séance, devoirs et
           auto-évaluations.

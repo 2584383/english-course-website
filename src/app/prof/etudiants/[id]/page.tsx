@@ -331,7 +331,7 @@ function Header({
 }) {
   return (
     <header className="flex flex-wrap items-center gap-4">
-      <Avatar label={initials(profile.full_name)} size={56} />
+      <Avatar label={initials(profile.full_name)} src={profile.avatar_url} size={56} />
       <div className="flex-1">
         <h1 className="font-display text-2xl font-extrabold text-ink">
           {profile.full_name}

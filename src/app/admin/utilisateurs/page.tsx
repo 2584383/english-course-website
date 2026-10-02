@@ -55,7 +55,7 @@ export default async function UsersPage() {
           {users.map((user) => (
             <Card key={user.id} className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center gap-3">
-                <Avatar label={initials(user.full_name)} size={40} />
+                <Avatar label={initials(user.full_name)} src={user.avatar_url} size={40} />
 
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-ink">

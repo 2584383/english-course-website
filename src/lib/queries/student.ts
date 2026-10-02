@@ -146,15 +146,21 @@ export async function getPathProgress(studentId: string) {
  * renseigné, les pages retombent sur « ton enseignant ».
  */
 export async function getTeacherName(teacherId: string | null | undefined) {
+  return (await getTeacher(teacherId))?.name ?? null;
+}
+
+/** Nom et photo de l'enseignant de l'étudiant. */
+export async function getTeacher(teacherId: string | null | undefined) {
   if (!teacherId) return null;
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
-    .select("full_name")
+    .select("full_name, avatar_url")
     .eq("id", teacherId)
     .maybeSingle();
 
-  return data?.full_name?.trim() || null;
+  if (!data) return null;
+  return { name: data.full_name?.trim() || null, avatarUrl: data.avatar_url };
 }
 
 export async function getStudentReports(studentId: string) {
