@@ -15,7 +15,8 @@ export default async function TeacherProfilePage() {
       <header>
         <h1 className="font-display text-2xl font-extrabold text-ink">Mon profil</h1>
         <p className="text-sm text-muted">
-          Ce que voient les nouveaux inscrits quand ils choisissent leur prof.
+          Ce que voient les visiteurs quand ils choisissent leur prof pour
+          l&apos;appel découverte.
         </p>
       </header>
 
@@ -28,8 +29,8 @@ export default async function TeacherProfilePage() {
               label={initials(profile.full_name)}
             />
             <p className="text-xs text-muted">
-              Visible par tes étudiants et par les nouveaux inscrits qui
-              choisissent leur prof.
+              Visible par tes étudiants et par les visiteurs qui choisissent
+              leur prof pour l&apos;appel découverte.
             </p>
           </Card>
 
@@ -37,7 +38,7 @@ export default async function TeacherProfilePage() {
             <SectionTitle
               action={
                 listed ? (
-                  <Badge tone="success">Proposé aux inscrits</Badge>
+                  <Badge tone="success">Proposé aux visiteurs</Badge>
                 ) : (
                   <Badge tone="warn">Non proposé</Badge>
                 )
@@ -57,9 +58,10 @@ export default async function TeacherProfilePage() {
               (par exemple 20 min), puis colle ici son lien public.
             </p>
             <p>
-              Après leur inscription, les apprenants choisissent leur prof et
-              réservent ce créneau. L&apos;appel apparaît alors dans
-              « Appels de découverte » et l&apos;apprenant t&apos;est rattaché.
+              Les visiteurs choisissent leur prof et réservent ce créneau sans
+              créer de compte. L&apos;appel apparaît dans « Appels de
+              découverte » : invite la personne si elle se lance, ou elle crée
+              son compte avec le même email et t&apos;est rattachée.
             </p>
           </Card>
         </aside>

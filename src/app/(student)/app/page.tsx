@@ -13,7 +13,6 @@ import {
 } from "@/components/student/kit";
 import { Avatar } from "@/components/ui";
 import { requireStudent } from "@/lib/auth";
-import { getDiscoveryState } from "@/lib/discovery";
 import { getStudentDashboard, getTeacher } from "@/lib/queries/student";
 import { groupWork } from "@/lib/student-work";
 import { firstName, formatShortDate, initials } from "@/lib/utils";
@@ -27,10 +26,9 @@ export const metadata = { title: "Accueil" };
  */
 export default async function StudentHomePage() {
   const { profile, studentProfile } = await requireStudent();
-  const [dashboard, teacherCard, discovery] = await Promise.all([
+  const [dashboard, teacherCard] = await Promise.all([
     getStudentDashboard(profile.id),
     getTeacher(studentProfile?.teacher_id),
-    getDiscoveryState(profile.id),
   ]);
   const {
     path,
@@ -86,29 +84,6 @@ export default async function StudentHomePage() {
 
       <div className="grid items-start gap-3.5 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:gap-5">
         <div className="flex min-w-0 flex-col gap-3.5 lg:gap-5">
-          {discovery.offer ? (
-            <Panel
-              tone="soft"
-              size="lg"
-              className="flex flex-col gap-2.5 lg:gap-[11px] lg:p-[26px]"
-            >
-              <Kicker tone="brand">Première étape</Kicker>
-              <p className="font-display text-[19px] font-bold leading-[1.2] text-ink lg:text-2xl">
-                Réserve ton appel découverte
-              </p>
-              <p className="max-w-[520px] text-sm leading-[1.45] text-body lg:text-[15px] lg:leading-normal">
-                Choisis ton prof et un créneau : vous ferez le point sur ton
-                niveau et tes objectifs avant de construire ton parcours.
-              </p>
-              <ActionLink
-                href="/app/decouverte"
-                className="mt-0.5 lg:mt-1 lg:self-start lg:px-6 lg:py-[13px]"
-              >
-                Choisir mon prof
-              </ActionLink>
-            </Panel>
-          ) : null}
-
           {isFirstVisit && path ? (
             <Panel
               tone="soft"

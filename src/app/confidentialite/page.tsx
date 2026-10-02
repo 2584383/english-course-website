@@ -12,6 +12,11 @@ export default function PrivacyPolicyPage() {
           horaire.
         </li>
         <li>
+          <strong>Appel de découverte</strong> (sans compte) : nom, adresse
+          email et créneau réservé via Calendly, transmis à l&apos;enseignant
+          choisi pour préparer l&apos;échange.
+        </li>
+        <li>
           <strong>Photo de profil</strong> (facultative) : celle d&apos;un
           apprenant n&apos;est visible que par son enseignant et
           l&apos;administrateur ; celle d&apos;un enseignant est visible par

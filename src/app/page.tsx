@@ -75,13 +75,17 @@ export default async function LandingPage() {
         </p>
 
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-          <ButtonLink href="/inscription" tone="accent">
-            Créer mon compte
+          <ButtonLink href="/appel-decouverte" tone="accent">
+            Réserver mon appel découverte (gratuit)
           </ButtonLink>
-          <ButtonLink href="/connexion" tone="ghost">
-            J&apos;ai déjà un compte
+          <ButtonLink href="/inscription" tone="ghost">
+            J&apos;ai déjà fait mon appel
           </ButtonLink>
         </div>
+        <p className="mt-3 text-xs text-muted">
+          Pas besoin de compte pour l&apos;appel : tu le crées seulement si tu
+          te lances.
+        </p>
       </section>
 
       <section className="mx-auto max-w-5xl px-5 pb-14">

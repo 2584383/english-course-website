@@ -108,8 +108,10 @@ export async function POST(request: NextRequest) {
   const discovery = decodeDiscoveryContext(payload.tracking?.utm_content);
   if (discovery) {
     const result = await recordDiscoveryCall(admin, {
-      ...discovery,
+      teacherId: discovery.teacherId,
       eventUri: scheduled.uri,
+      name: payload.name ?? null,
+      email: payload.email ?? null,
       startTime: scheduled.start_time,
       endTime: scheduled.end_time,
     });
