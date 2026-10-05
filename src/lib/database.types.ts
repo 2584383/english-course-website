@@ -96,6 +96,8 @@ export type DiscoveryCall = {
   /** Compte de l'étudiant qui a réservé l'appel depuis l'application. */
   student_id: string | null;
   calendly_event_uri: string | null;
+  /** Lien Google Meet (ou Zoom) généré par Calendly. */
+  meet_url: string | null;
   created_at: string;
   updated_at: string;
 };

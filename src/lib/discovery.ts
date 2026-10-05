@@ -89,6 +89,7 @@ export async function recordDiscoveryCall(
     email: string | null;
     startTime: string;
     endTime: string;
+    meetUrl: string | null;
   },
 ) {
   const teachers = await listDiscoveryTeachers(admin);
@@ -121,6 +122,7 @@ export async function recordDiscoveryCall(
       calendly_event_uri: input.eventUri,
       scheduled_at: input.startTime,
       duration_minutes: Number.isFinite(minutes) ? minutes : null,
+      meet_url: input.meetUrl,
       status: "scheduled",
     },
     { onConflict: "calendly_event_uri" },
