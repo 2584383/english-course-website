@@ -1,8 +1,13 @@
 import Link from "next/link";
 
+import { DiscoveryCallSlot } from "@/components/teacher/DiscoveryCallSlot";
 import { Badge, Card, EmptyState } from "@/components/ui";
 import { requireTeacher } from "@/lib/auth";
-import { getTeacherStudents, getWeekBookings } from "@/lib/queries/teacher";
+import {
+  getScheduledDiscoveryCalls,
+  getTeacherStudents,
+  getWeekBookings,
+} from "@/lib/queries/teacher";
 import { formatTime } from "@/lib/utils";
 
 export const metadata = { title: "Planning" };
@@ -31,8 +36,12 @@ export default async function PlanningPage({
   const weekStart = startOfWeek(new Date());
   weekStart.setDate(weekStart.getDate() + offsetWeeks * 7);
 
-  const [bookings, students] = await Promise.all([
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+
+  const [bookings, calls, students] = await Promise.all([
     getWeekBookings(id, weekStart),
+    getScheduledDiscoveryCalls(id, weekStart, weekEnd),
     getTeacherStudents(id),
   ]);
 
@@ -42,18 +51,26 @@ export default async function PlanningPage({
     const date = new Date(weekStart);
     date.setDate(date.getDate() + index);
 
-    return {
-      label,
-      date,
-      bookings: bookings.filter((booking) => {
-        const start = new Date(booking.starts_at);
-        return (
-          start.getFullYear() === date.getFullYear() &&
-          start.getMonth() === date.getMonth() &&
-          start.getDate() === date.getDate()
-        );
-      }),
+    const sameDay = (iso: string) => {
+      const start = new Date(iso);
+      return (
+        start.getFullYear() === date.getFullYear() &&
+        start.getMonth() === date.getMonth() &&
+        start.getDate() === date.getDate()
+      );
     };
+
+    // Séances et appels de découverte mêlés, dans l'ordre de la journée
+    const events = [
+      ...bookings
+        .filter((booking) => sameDay(booking.starts_at))
+        .map((booking) => ({ kind: "booking" as const, at: booking.starts_at, booking })),
+      ...calls
+        .filter((call) => sameDay(call.scheduled_at!))
+        .map((call) => ({ kind: "call" as const, at: call.scheduled_at!, call })),
+    ].sort((a, b) => a.at.localeCompare(b.at));
+
+    return { label, date, events };
   });
 
   const rangeLabel = new Intl.DateTimeFormat("fr-FR", {
@@ -95,10 +112,10 @@ export default async function PlanningPage({
         </nav>
       </header>
 
-      {bookings.length === 0 ? (
+      {bookings.length === 0 && calls.length === 0 ? (
         <EmptyState
           title="Aucune séance cette semaine"
-          description="Les créneaux réservés via Calendly apparaissent ici automatiquement."
+          description="Les séances et appels de découverte réservés via Calendly apparaissent ici automatiquement."
         />
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -113,11 +130,19 @@ export default async function PlanningPage({
                 </span>
               </div>
 
-              {day.bookings.length === 0 ? (
+              {day.events.length === 0 ? (
                 <p className="text-xs text-muted-soft">—</p>
               ) : (
                 <ul className="flex flex-col gap-1.5">
-                  {day.bookings.map((booking) => {
+                  {day.events.map((event) => {
+                    if (event.kind === "call") {
+                      return (
+                        <li key={event.call.id}>
+                          <DiscoveryCallSlot call={event.call} />
+                        </li>
+                      );
+                    }
+                    const { booking } = event;
                     const student = byId.get(booking.student_id);
                     return (
                       <li key={booking.id}>

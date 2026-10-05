@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
       email: payload.email ?? null,
       startTime: scheduled.start_time,
       endTime: scheduled.end_time,
+      meetUrl: extractMeetUrl(payload),
     });
     if ("error" in result) {
       console.warn("[calendly] appel de découverte non enregistré", result.error);

@@ -152,6 +152,28 @@ export async function getWeekBookings(teacherId: string, weekStart: Date) {
   return (data ?? []) as Booking[];
 }
 
+/**
+ * Appels de découverte programmés sur une période, pour les afficher à côté
+ * des séances (un appel annulé perd son horaire et disparaît d'ici).
+ */
+export async function getScheduledDiscoveryCalls(
+  teacherId: string,
+  from: Date,
+  to: Date,
+) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("discovery_calls")
+    .select("*")
+    .eq("teacher_id", teacherId)
+    .neq("status", "lost")
+    .gte("scheduled_at", from.toISOString())
+    .lt("scheduled_at", to.toISOString())
+    .order("scheduled_at");
+
+  return (data ?? []) as DiscoveryCall[];
+}
+
 export async function getDiscoveryCalls(teacherId: string) {
   const supabase = await createClient();
   const { data } = await supabase

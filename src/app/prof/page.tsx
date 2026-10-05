@@ -1,9 +1,11 @@
 import Link from "next/link";
 
+import { MeetLink } from "@/components/teacher/DiscoveryCallSlot";
 import { Badge, Card, Eyebrow, EmptyState, SectionTitle } from "@/components/ui";
 import { requireTeacher } from "@/lib/auth";
 import {
   getBookingsAwaitingReport,
+  getScheduledDiscoveryCalls,
   getTeacherStudents,
   getTodayBookings,
 } from "@/lib/queries/teacher";
@@ -14,8 +16,15 @@ export const metadata = { title: "Aujourd'hui" };
 export default async function TeacherTodayPage() {
   const { id, profile } = await requireTeacher();
 
-  const [today, students, awaitingReport] = await Promise.all([
+  // Même borne de journée que getTodayBookings
+  const dayStart = new Date();
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+
+  const [today, calls, students, awaitingReport] = await Promise.all([
     getTodayBookings(id),
+    getScheduledDiscoveryCalls(id, dayStart, dayEnd),
     getTeacherStudents(id),
     getBookingsAwaitingReport(id),
   ]);
@@ -41,6 +50,9 @@ export default async function TeacherTodayPage() {
           {today.length === 0
             ? "Aucune séance aujourd'hui."
             : `${today.length} séance${today.length > 1 ? "s" : ""} aujourd'hui.`}
+          {calls.length
+            ? ` ${calls.length} appel${calls.length > 1 ? "s" : ""} découverte.`
+            : ""}
         </p>
       </header>
 
@@ -59,12 +71,46 @@ export default async function TeacherTodayPage() {
             Mes séances du jour
           </SectionTitle>
 
-          {today.length === 0 ? (
+          {calls.length > 0 ? (
+            <ul className="flex flex-col gap-2">
+              {calls.map((call) => (
+                <li key={call.id}>
+                  <Card tone="accent" className="flex flex-wrap items-center gap-3">
+                    <span className="w-16 flex-none font-display text-lg font-extrabold text-accent-ink">
+                      {formatTime(call.scheduled_at!)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-bold text-ink">
+                        {call.full_name}
+                      </span>
+                      <span className="block text-xs text-accent-ink">
+                        Appel découverte
+                        {call.duration_minutes ? ` · ${call.duration_minutes} min` : ""}
+                      </span>
+                    </span>
+                    <Badge tone="accent">{relativeLabel(call.scheduled_at!)}</Badge>
+                    <MeetLink
+                      url={call.meet_url}
+                      className="rounded-[var(--radius-field)] bg-brand-800 px-3.5 py-2 text-xs font-bold text-white no-underline"
+                    />
+                    <Link
+                      href="/prof/appels"
+                      className="rounded-[var(--radius-field)] border border-line bg-white px-3.5 py-2 text-xs font-bold text-brand-600 no-underline"
+                    >
+                      Notes
+                    </Link>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {today.length === 0 && calls.length === 0 ? (
             <EmptyState
               title="Journée libre"
               description="Aucun créneau réservé pour aujourd'hui."
             />
-          ) : (
+          ) : today.length === 0 ? null : (
             <ul className="flex flex-col gap-2">
               {today.map((booking) => {
                 const student = byId.get(booking.student_id);

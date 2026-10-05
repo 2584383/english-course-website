@@ -1,11 +1,12 @@
 import Link from "next/link";
 
 import { DiscoveryCallForm } from "@/components/teacher/DiscoveryCallForm";
+import { MeetLink } from "@/components/teacher/DiscoveryCallSlot";
 import { InviteFromCallButton } from "@/components/teacher/InviteFromCallButton";
 import { Badge, Card, EmptyState, SectionTitle } from "@/components/ui";
 import { requireTeacher } from "@/lib/auth";
 import { getDiscoveryCalls } from "@/lib/queries/teacher";
-import { formatDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import type { DiscoveryStatus } from "@/lib/database.types";
 
 export const metadata = { title: "Appels de découverte" };
@@ -78,13 +79,18 @@ export default async function DiscoveryCallsPage() {
 
                 <p className="text-xs text-muted">
                   {[
-                    call.scheduled_at ? formatDate(call.scheduled_at) : null,
+                    call.scheduled_at ? formatDateTime(call.scheduled_at) : null,
                     call.email,
                     call.phone,
                   ]
                     .filter(Boolean)
                     .join(" · ") || "Coordonnées à compléter"}
                 </p>
+
+                {/* Tant que l'appel est « prévu » (une annulation le fait repasser à qualifier) */}
+                {call.status === "scheduled" ? (
+                  <MeetLink url={call.meet_url} />
+                ) : null}
 
                 {call.notes ? (
                   <p className="whitespace-pre-line text-[13px] leading-relaxed text-brand-600">
