@@ -208,7 +208,7 @@ export async function inviteStudent(
     parsed.data.email,
     {
       data: { full_name: parsed.data.fullName, role: "student" },
-      redirectTo: `${publicEnv.siteUrl.replace(/\/$/, "")}/auth/callback?next=/bienvenue`,
+      redirectTo: `${publicEnv.siteUrl.replace(/\/$/, "")}/auth/callback?next=/nouveau-mot-de-passe`,
     },
   );
 

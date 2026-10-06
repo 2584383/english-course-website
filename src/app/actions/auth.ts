@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { z } from "zod";
 
+import { publicEnv } from "@/lib/env";
 import { HOME_BY_ROLE } from "@/lib/supabase/session";
 import { createClient } from "@/lib/supabase/server";
 
@@ -118,6 +119,91 @@ export async function signUp(
 
   revalidatePath("/", "layout");
   redirect("/bienvenue");
+}
+
+/* -------------------------------------------------------------------------- */
+/* Mot de passe oublié                                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Envoie l'email de réinitialisation. Même réponse que le compte existe ou
+ * non : on ne révèle pas quelles adresses sont inscrites.
+ */
+export async function requestPasswordReset(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = z
+    .string()
+    .trim()
+    .email("Adresse email invalide.")
+    .safeParse(formData.get("email"));
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
+    redirectTo: `${publicEnv.siteUrl.replace(/\/$/, "")}/auth/callback?next=/nouveau-mot-de-passe`,
+  });
+
+  // Limite d'envoi Supabase atteinte : seul cas où l'on prévient l'utilisateur
+  if (error?.status === 429) {
+    return { error: "Trop de demandes. Réessaie dans quelques minutes." };
+  }
+
+  return {
+    success:
+      "Si un compte existe avec cette adresse, tu vas recevoir un email avec un lien pour choisir un nouveau mot de passe. Pense à vérifier tes spams.",
+  };
+}
+
+const newPasswordSchema = z
+  .object({
+    password: z.string().min(8, "Le mot de passe doit faire au moins 8 caractères."),
+    confirmation: z.string(),
+  })
+  .refine((value) => value.password === value.confirmation, {
+    message: "Les deux mots de passe ne correspondent pas.",
+  });
+
+/** Nouveau mot de passe, après un lien de réinitialisation ou d'invitation. */
+export async function updatePassword(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = newPasswordSchema.safeParse({
+    password: formData.get("password"),
+    confirmation: formData.get("confirmation"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Le lien a expiré. Refais une demande de réinitialisation." };
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  });
+  if (error) {
+    return {
+      error:
+        error.code === "same_password"
+          ? "Choisis un mot de passe différent de l'ancien."
+          : error.message,
+    };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  revalidatePath("/", "layout");
+  redirect(HOME_BY_ROLE[profile?.role ?? "student"]);
 }
 
 export async function signOut() {

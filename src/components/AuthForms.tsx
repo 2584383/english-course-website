@@ -4,7 +4,13 @@ import { useActionState, useState } from "react";
 
 import Link from "next/link";
 
-import { signIn, signUp, type ActionState } from "@/app/actions/auth";
+import {
+  requestPasswordReset,
+  signIn,
+  signUp,
+  updatePassword,
+  type ActionState,
+} from "@/app/actions/auth";
 import { Alert, Button, Field, Input } from "@/components/ui";
 
 const EMPTY: ActionState = {};
@@ -36,6 +42,13 @@ export function SignInForm({ next }: { next?: string }) {
           placeholder="8 caractères minimum"
         />
       </Field>
+
+      <Link
+        href="/mot-de-passe-oublie"
+        className="-mt-2 self-end text-xs font-bold text-brand-800"
+      >
+        Mot de passe oublié ?
+      </Link>
 
       <Button type="submit" disabled={pending}>
         {pending ? "Connexion…" : "Se connecter"}
@@ -177,5 +190,88 @@ function Consent({
         <span className="mt-0.5 block text-xs text-muted-soft">{children}</span>
       </span>
     </label>
+  );
+}
+
+/** Demande du lien de réinitialisation, par email. */
+export function ForgotPasswordForm() {
+  const [state, action, pending] = useActionState(requestPasswordReset, EMPTY);
+
+  if (state.success) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Alert tone="success">{state.success}</Alert>
+        <Link href="/connexion" className="text-center text-sm font-bold text-brand-800">
+          Retour à la connexion
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <form action={action} className="flex flex-col gap-4">
+      {state.error ? <Alert tone="error">{state.error}</Alert> : null}
+
+      <Field label="Email de ton compte">
+        <Input
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+          placeholder="amina@exemple.fr"
+        />
+      </Field>
+
+      <Button type="submit" disabled={pending}>
+        {pending ? "Envoi…" : "Recevoir le lien"}
+      </Button>
+
+      <Link href="/connexion" className="text-center text-xs font-bold text-brand-800">
+        Retour à la connexion
+      </Link>
+    </form>
+  );
+}
+
+/** Choix du mot de passe, après un lien de réinitialisation ou d'invitation. */
+export function NewPasswordForm() {
+  const [state, action, pending] = useActionState(updatePassword, EMPTY);
+  const [password, setPassword] = useState("");
+  const meter = strength(password);
+
+  return (
+    <form action={action} className="flex flex-col gap-4">
+      {state.error ? <Alert tone="error">{state.error}</Alert> : null}
+
+      <Field label="Nouveau mot de passe">
+        <Input
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          placeholder="8 caractères minimum"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
+      </Field>
+      <p className="-mt-2 text-xs text-muted-soft" aria-live="polite">
+        {password ? meter.label : ""}
+      </p>
+
+      <Field label="Confirme le mot de passe">
+        <Input
+          name="confirmation"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+        />
+      </Field>
+
+      <Button type="submit" disabled={pending}>
+        {pending ? "Enregistrement…" : "Enregistrer et continuer"}
+      </Button>
+    </form>
   );
 }
