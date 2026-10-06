@@ -44,7 +44,7 @@ export async function createUser(
 
   const { error } = await admin.auth.admin.inviteUserByEmail(parsed.data.email, {
     data: { full_name: parsed.data.fullName, role: parsed.data.role },
-    redirectTo: `${publicEnv.siteUrl.replace(/\/$/, "")}/auth/callback`,
+    redirectTo: `${publicEnv.siteUrl.replace(/\/$/, "")}/auth/callback?next=/nouveau-mot-de-passe`,
   });
 
   if (error) return { error: error.message };

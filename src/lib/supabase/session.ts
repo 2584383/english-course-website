@@ -16,6 +16,7 @@ const PUBLIC_PATHS = [
   "/connexion",
   "/inscription",
   "/appel-decouverte",
+  "/mot-de-passe-oublie",
   "/confidentialite",
   "/cgu",
   "/hors-ligne",
