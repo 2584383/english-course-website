@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { claimStudent, setBookingAccess } from "@/app/actions/teacher";
 import { AssignPathForm } from "@/components/teacher/AssignPathForm";
 import { AssignHomeworkForm } from "@/components/teacher/AssignHomeworkForm";
+import { DeleteStudentForm } from "@/components/teacher/DeleteStudentForm";
 import { PathEditor } from "@/components/teacher/PathEditor";
 import { StudentSheetForm } from "@/components/teacher/StudentSheetForm";
 import {
@@ -314,6 +315,14 @@ export default async function StudentSheetPage({
               />
             </Card>
           ) : null}
+
+          <Card className="flex flex-col gap-3">
+            <SectionTitle>Ne suit plus de cours ?</SectionTitle>
+            <DeleteStudentForm
+              studentId={studentId}
+              name={profile.full_name ?? profile.email}
+            />
+          </Card>
         </aside>
       </div>
     </div>

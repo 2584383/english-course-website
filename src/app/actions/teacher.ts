@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireTeacher } from "@/lib/auth";
+import { deleteAvatarFiles } from "@/lib/avatars";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { sendStudentInvitation, sendReportPublished } from "@/lib/email/send";
@@ -227,6 +228,59 @@ export async function inviteStudent(
   revalidatePath("/prof/etudiants");
   revalidatePath("/prof/appels");
   return { success: `Invitation envoyée à ${parsed.data.email}.` };
+}
+
+/**
+ * Supprime définitivement un étudiant qui ne suit plus de cours : la
+ * suppression du compte `auth.users` cascade sur parcours, séances,
+ * comptes-rendus et devoirs. Limité aux élèves de l'enseignant et aux
+ * nouveaux inscrits sans enseignant.
+ */
+export async function deleteStudent(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const teacher = await requireTeacher();
+
+  const studentId = String(formData.get("studentId"));
+  if (formData.get("confirmation") !== "SUPPRIMER") {
+    return { error: "Saisis SUPPRIMER pour confirmer." };
+  }
+
+  const supabase = await createClient();
+  const [{ data: profile }, { data: studentProfile }] = await Promise.all([
+    supabase.from("profiles").select("role").eq("id", studentId).maybeSingle(),
+    supabase
+      .from("student_profiles")
+      .select("teacher_id")
+      .eq("id", studentId)
+      .maybeSingle(),
+  ]);
+
+  const allowed =
+    profile?.role === "student" &&
+    studentProfile != null &&
+    (teacher.profile.role === "super_admin" ||
+      studentProfile.teacher_id === null ||
+      studentProfile.teacher_id === teacher.id);
+  if (!allowed) return { error: "Tu ne peux pas supprimer cet étudiant." };
+
+  try {
+    const admin = createAdminClient();
+    await deleteAvatarFiles(admin, studentId);
+    const { error } = await admin.auth.admin.deleteUser(studentId);
+    if (error) return { error: error.message };
+  } catch {
+    return {
+      error:
+        "SUPABASE_SERVICE_ROLE_KEY n'est pas configurée : la suppression d'étudiants est indisponible.",
+    };
+  }
+
+  revalidatePath("/prof/etudiants");
+  revalidatePath("/prof/planning");
+  revalidatePath("/prof");
+  redirect("/prof/etudiants");
 }
 
 /* -------------------------------------------------------------------------- */
